@@ -11,3 +11,5 @@ __pycache__/
 .vscode/
 .DS_Store
 "@ | Set-Content -Encoding ascii .gitignore
+
+scratch/
