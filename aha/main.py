@@ -12,6 +12,7 @@ from passlib.context import CryptContext
 import redis
 import pickle
 import asyncio
+from auth import get_current_user_id
 
 app = FastAPI(title="Titanit Backend API")
 
