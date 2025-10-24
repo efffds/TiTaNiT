@@ -1,0 +1,13 @@
+@"
+# Python / venv / caches
+.venv/
+__pycache__/
+*.pyc
+
+# Local DB files
+*.db
+
+# OS/IDE
+.vscode/
+.DS_Store
+"@ | Set-Content -Encoding ascii .gitignore
