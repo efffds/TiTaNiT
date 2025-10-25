@@ -11,6 +11,7 @@ export default function App() {
           <Link to="/home">Home</Link>
           <Link to="/login">Login</Link>
           <Link to="/signup">Signup</Link>
+          <Link to="/chats">Chats</Link>
         </nav>
         {token ? <button onClick={()=>{clearToken(); nav("/login");}}>Logout</button> : null}
       </header>

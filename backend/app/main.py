@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from .routers import auth, users, recommendations, analytics
+from .routers import chat as chat_router
 from .db import Base, engine  # <-- импорт именно из db.py
 
 # Создание таблиц при запуске
@@ -39,6 +40,7 @@ app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(recommendations.router)
 app.include_router(analytics.router)
+app.include_router(chat_router.router)
 
 # Роутер свайпов (лайки/дизлайки)
 from .routers import likes as likes_router  # импорт после создания app, чтобы избежать циклов

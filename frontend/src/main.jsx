@@ -6,6 +6,8 @@ import App from './App.jsx'
 import Login from './pages/Login.jsx'
 import Signup from './pages/Signup.jsx'
 import Home from './pages/Home.jsx'
+import Chats from './pages/Chats.jsx'
+import Chat from './pages/Chat.jsx'
 import './index.css'
 
 async function bootstrap() {
@@ -29,6 +31,8 @@ async function bootstrap() {
               <Route path="login" element={<Login />} />
               <Route path="signup" element={<Signup />} />
               <Route path="home" element={<Home />} />
+              <Route path="chats" element={<Chats />} />
+              <Route path="chat/:partnerId" element={<Chat />} />
             </Route>
           </Routes>
         </BrowserRouter>

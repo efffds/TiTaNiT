@@ -57,7 +57,27 @@ class Match(Base):
         UniqueConstraint("user1_id", "user2_id", name="uq_match_pair"),
     )
 
-# class Message(Base): ...
+# --- Чаты и сообщения ---
+class Conversation(Base):
+    __tablename__ = "conversations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user1_id = Column(Integer, index=True, nullable=False)
+    user2_id = Column(Integer, index=True, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("user1_id", "user2_id", name="uq_conversation_pair"),
+    )
+
+class Message(Base):
+    __tablename__ = "messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    conversation_id = Column(Integer, index=True, nullable=False)
+    sender_id = Column(Integer, index=True, nullable=False)
+    body = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 # --- Кэш/набор совпадений для одного пользователя ---
 class MatchSet(Base):
