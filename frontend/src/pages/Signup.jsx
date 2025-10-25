@@ -38,9 +38,19 @@ export default function Signup() {
     try {
       setLoading(true);
       // backend пока принимает: email, password, name, city
-      await signup({ email, password, name, city });
-      // age/bio можно отправлять отдельным PATCH профиля, когда появится API
-      nav("/login");
+        const res = await signup({ email, password, name, city });
+
+        // если бэк возвращает токен — сохраняем его
+        if (res?.access_token) {
+            import("../auth").then(({ saveToken }) => {
+                saveToken(res.access_token);
+                nav("/profile");
+            });
+        } else {
+        // fallback, если токена нет
+            nav("/login");
+        }
+
     } catch (e) {
       setErr(e?.message || "Ошибка регистрации");
     } finally {
