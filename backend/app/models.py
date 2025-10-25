@@ -58,3 +58,18 @@ class Match(Base):
     )
 
 # class Message(Base): ...
+
+# ... (ваш существующий models.py) ...
+# ... (User, Profile) ...
+
+# --- НОВОЕ: Модель для хранения совпадений ---
+class Match(Base):
+    __tablename__ = "matches"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, nullable=False, index=True) # ID пользователя, для которого найдены совпадения
+    matched_user_ids = Column(JSON) # Массив ID совпавших пользователей (например, [1, 5, 10])
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+# ... (остальные модели) ...
