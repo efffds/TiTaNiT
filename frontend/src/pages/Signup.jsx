@@ -1,9 +1,16 @@
-import { useState } from "react";
+// src/pages/Signup.jsx
+import { useState, useEffect } from "react";
 import { signup } from "../api";
 import { useNavigate, Link } from "react-router-dom";
+import { saveToken, getToken } from "../auth";
 
 export default function Signup() {
   const nav = useNavigate();
+
+  // если уже залогинен — сразу в профиль
+  useEffect(() => {
+    if (getToken()) nav("/profile", { replace: true });
+  }, [nav]);
 
   // шаги
   const [step, setStep] = useState(1);
@@ -16,43 +23,68 @@ export default function Signup() {
   const [bio, setBio]     = useState("");
 
   // поля шага 2
-  const [password, setPassword]         = useState("");
-  const [password2, setPassword2]       = useState("");
+  const [password, setPassword]   = useState("");
+  const [password2, setPassword2] = useState("");
 
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
 
+  function validateStep1() {
+    if (!email || !name) return "Заполните email и имя";
+    const emailOk = /\S+@\S+\.\S+/.test(email);
+    if (!emailOk) return "Неверный формат email";
+    if (age && !/^\d+$/.test(age)) return "Возраст должен быть числом";
+    return "";
+  }
+
+  function validateStep2() {
+    if (password.length < 6) return "Пароль должен быть не короче 6 символов";
+    if (password.length > 72) return "Пароль слишком длинный (макс. 72 символа)";
+    if (password !== password2) return "Пароли не совпадают";
+    return "";
+  }
+
   const goStep2 = (e) => {
     e.preventDefault();
     setErr("");
-    if (!email || !name) return setErr("Заполните email и имя");
+    const v = validateStep1();
+    if (v) return setErr(v);
     setStep(2);
   };
 
   const doSignup = async (e) => {
     e.preventDefault();
     setErr("");
-    if (password.length < 6) return setErr("Пароль должен быть не короче 6 символов");
-    if (password !== password2) return setErr("Пароли не совпадают");
+    const v = validateStep2();
+    if (v) return setErr(v);
 
     try {
       setLoading(true);
-      // backend пока принимает: email, password, name, city
-        const res = await signup({ email, password, name, city });
 
-        // если бэк возвращает токен — сохраняем его
-        if (res?.access_token) {
-            import("../auth").then(({ saveToken }) => {
-                saveToken(res.access_token);
-                nav("/profile");
-            });
-        } else {
-        // fallback, если токена нет
-            nav("/login");
-        }
+      // Бэк сейчас принимает: email, password, name, city
+      const res = await signup({
+        email: email.trim(),
+        password,
+        name: name.trim(),
+        city: city.trim(),
+        // age, bio — пока не шлём, если бэк их не принимает
+      });
 
+      // если бэк вернул токен — сохраняем, ведём в профиль
+      if (res?.access_token) {
+        saveToken(res.access_token);
+        nav("/profile", { replace: true });
+      } else {
+        // если токена нет (например, бэк решил по-другому) — ведём на логин
+        nav("/login", { replace: true });
+      }
     } catch (e) {
-      setErr(e?.message || "Ошибка регистрации");
+      // показать понятное сообщение (пытаемся достать detail)
+      const msg =
+        (e?.response?.data && (e.response.data.detail || e.response.data.message)) ||
+        e?.message ||
+        "Ошибка регистрации";
+      setErr(String(msg));
     } finally {
       setLoading(false);
     }
@@ -81,12 +113,14 @@ export default function Signup() {
             value={email}
             onChange={(e)=>setEmail(e.target.value)}
             style={styles.input}
+            required
           />
           <input
             placeholder="Имя"
             value={name}
             onChange={(e)=>setName(e.target.value)}
             style={styles.input}
+            required
           />
           <input
             placeholder="Город"
@@ -99,6 +133,7 @@ export default function Signup() {
             value={age}
             onChange={(e)=>setAge(e.target.value)}
             style={styles.input}
+            inputMode="numeric"
           />
           <textarea
             placeholder="О себе"
@@ -108,7 +143,7 @@ export default function Signup() {
             style={{...styles.input, resize:"vertical"}}
           />
           <button type="submit" style={styles.cta} disabled={loading}>
-            Искать людей
+            Далее
           </button>
           <div style={styles.underline}/>
         </form>
@@ -120,6 +155,7 @@ export default function Signup() {
             value={password}
             onChange={(e)=>setPassword(e.target.value)}
             style={styles.input}
+            required
           />
           <input
             placeholder="Повторите пароль"
@@ -127,9 +163,10 @@ export default function Signup() {
             value={password2}
             onChange={(e)=>setPassword2(e.target.value)}
             style={styles.input}
+            required
           />
           <button type="submit" style={styles.cta} disabled={loading}>
-            Зарегистрироваться
+            {loading ? "Создаём..." : "Зарегистрироваться"}
           </button>
           <div style={styles.underline}/>
         </form>
@@ -175,7 +212,7 @@ const styles = {
     width: "100%",
     padding: "14px 16px",
     fontWeight: 800,
-    fontSize: 22,
+    fontSize: 20,
     borderRadius: 14,
     background: "#0f0f0f",
     color: "#fff",
