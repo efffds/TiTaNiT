@@ -1,33 +1,31 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from ..db import get_async_session
 from ..models import User
-from ..schemas import UserCreate, Token
-from ..security import hash_password, verify_password, create_access_token
+from ..security import hash_password, create_access_token
+from ..schemas import UserCreate
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-@router.post("/signup", response_model=Token, status_code=201)
-def signup(payload: UserCreate, db: Session = Depends(get_async_session)):
-    exists = db.query(User).filter(User.email == payload.email).first()
-    if exists:
+@router.post("/signup")
+async def signup(payload: UserCreate, db: AsyncSession = Depends(get_async_session)):
+    # проверить, что email свободен
+    res = await db.execute(select(User).where(User.email == payload.email))
+    if res.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Email already registered")
+
+    # создать пользователя
     user = User(
         email=payload.email,
-        password_hash=hash_password(payload.password),
         name=payload.name,
-        city=payload.city
+        city=payload.city,
+        hashed_password=hash_password(payload.password),
     )
     db.add(user)
-    db.commit()
-    db.refresh(user)
-    token = create_access_token({"user_id": user.id})
-    return {"access_token": token, "token_type": "bearer"}
+    await db.commit()
+    await db.refresh(user)
 
-@router.post("/login", response_model=Token)
-def login(payload: UserCreate, db: Session = Depends(get_async_session)):
-    user = db.query(User).filter(User.email == payload.email).first()
-    if not user or not verify_password(payload.password, user.password_hash):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
-    token = create_access_token({"user_id": user.id})
+    # выдать токен
+    token = create_access_token({"sub": str(user.id)})
     return {"access_token": token, "token_type": "bearer"}

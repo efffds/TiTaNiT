@@ -1,41 +1,28 @@
-# backend/app/database.py
+# backend/app/db.py
 
-# Импорты для асинхронной работы
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
-import os
+from sqlalchemy.orm import sessionmaker, declarative_base
 
-# Используем SQLite для асинхронной работы.
-# ВНИМАНИЕ: Для асинхронной работы с SQLite нужен драйвер aiosqlite.
-# Установите его: pip install aiosqlite
+# Подключение SQLite через aiosqlite
 DATABASE_URL = "sqlite+aiosqlite:///./titanit.db"
 
-# Создаем асинхронный движок
+# Создаём асинхронный движок
 engine = create_async_engine(
     DATABASE_URL,
-    # echo=True # Раскомментируйте для логирования SQL-запросов
-    connect_args={"check_same_thread": False} # Для SQLite, чтобы избежать ошибок в разных потоках
+    echo=False  # Поставь True, если хочешь видеть SQL-запросы в консоли
 )
 
-# Создаем асинхронную фабрику сессий
+# Создаём фабрику асинхронных сессий
 AsyncSessionLocal = sessionmaker(
-    engine,
-    class_=AsyncSession, # Указываем, что нужно создавать AsyncSession
-    expire_on_commit=False # Важно для асинхронных сессий
+    bind=engine,
+    class_=AsyncSession,
+    expire_on_commit=False
 )
 
 # Базовый класс для моделей SQLAlchemy
 Base = declarative_base()
 
-# Зависимость для получения асинхронной сессии базы данных в роутах
+# Зависимость для получения асинхронной сессии в роутах
 async def get_async_session():
     async with AsyncSessionLocal() as session:
         yield session
-
-# Если вам *всё равно* нужна синхронная сессия для *каких-то других частей* кода,
-# вы можете оставить старую синхронную, но лучше использовать асинхронную везде.
-# from sqlalchemy import create_engine
-# from sqlalchemy.orm import sessionmaker
-# sync_engine = create_engine(DATABASE_URL.replace("+aiosqlite", ""))
-# SyncSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=sync_engine)
