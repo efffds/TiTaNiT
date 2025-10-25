@@ -40,6 +40,10 @@ app.include_router(users.router)
 app.include_router(recommendations.router)
 app.include_router(analytics.router)
 
+# Роутер свайпов (лайки/дизлайки)
+from .routers import likes as likes_router  # импорт после создания app, чтобы избежать циклов
+app.include_router(likes_router.router)
+
 @app.get("/health")
 def health():
     return {"status": "ok"}

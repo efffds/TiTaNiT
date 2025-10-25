@@ -1,7 +1,7 @@
 # backend/app/schemas.py
 
 from pydantic import BaseModel, EmailStr
-from typing import List, Optional
+from typing import List, Optional, Literal
 
 # --- Существующие схемы ---
 class UserCreate(BaseModel):
@@ -45,7 +45,7 @@ class UserInterestsResponse(BaseModel):
 class SocialFieldResponse(BaseModel):
     data: List[CitySkills]
 
-# --- Схемы для профиля (если еще не созданы, но нужны для аналитики) ---
+# --- Схемы для профиля ---
 class ProfileCreateUpdate(BaseModel):
     name: Optional[str] = None
     age: Optional[int] = None
@@ -70,7 +70,7 @@ class ProfileOut(BaseModel):
     class Config:
         from_attributes = True
 
-# --- Схемы для рекомендаций (если еще не созданы) ---
+# --- Схемы для рекомендаций ---
 class Recommendation(BaseModel):
     user_id: int
     name: Optional[str]
@@ -80,3 +80,15 @@ class Recommendation(BaseModel):
     compatibility_score: float
     interests: List[str]
     skills: List[str]
+
+# --- Схемы для свайпов (лайк/дизлайк) ---
+class SwipeRequest(BaseModel):
+    target_user_id: int
+    action: Literal["like", "dislike"]
+
+class SwipeResponse(BaseModel):
+    action: str
+    match: bool = False
+
+class MatchesResponse(BaseModel):
+    user_ids: List[int]
