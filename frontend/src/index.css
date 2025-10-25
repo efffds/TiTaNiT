@@ -1,68 +1,85 @@
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
+/* БАЗА */
+html, body, #root { height: 100%; margin: 0; }
 body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+  background: #000;                 /* как в макете */
+  color: #fff;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+/* Заголовки и подписи — чисто белые */
+h1, h2, h3, .form-title, .form-label {
+  color: #ffffff;
 }
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
+/* Карточка формы */
+.card {
+  background: #0b0b0b;
+  border: none;
+  border-radius: 20px;
+  box-shadow: 0 0 20px rgba(0,0,0,0.5);
+}
+
+/* Инпуты без видимой рамки: только фон */
+input.form-control,
+textarea.form-control {
+  background: #1a1a1a;
+  border: none;
+  border-radius: 20px;
+  color: #F2F2F2;                   /* сам текст — ярче */
+  padding: 14px 18px;
+  font-size: 1rem;
   font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  transition: background 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+/* Плейсхолдер — ещё чуть светлее, чтобы был читаемее */
+input.form-control::placeholder,
+textarea.form-control::placeholder {
+  color: #CFCFCF;                   /* ярче стандартного серого */
+  opacity: 1;                       /* для Safari */
+}
+
+/* Фокус — без синей тени Bootstrap */
+input.form-control:focus,
+textarea.form-control:focus {
+  background: #222;
+  color: #ffffff;
+  box-shadow: none;
+  outline: none;
+}
+
+/* Кнопка действия */
+.btn-brand {
+  background: #26de50;
+  border: none;
+  border-radius: 14px;
+  font-weight: 800;
+  font-size: 20px;
+  color: #0a0a0a;
+  padding: 14px;
+  transition: transform .06s ease, filter .15s ease;
+}
+.btn-brand:hover { filter: brightness(1.05); }
+.btn-brand:active { transform: translateY(1px); }
+
+/* Акцентная линия под кнопкой */
+.cta-underline {
+  width: 100%;
+  height: 5px;
+  background: #26de50;
+  border-radius: 6px;
+  margin-top: 6px;
+}
+
+/* Низ страницы */
+.bottom-note {
+  margin-top: 20px;
+  font-size: 0.95rem;
+  opacity: 0.95;
+}
+.bottom-note a {
+  color: #26de50;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
