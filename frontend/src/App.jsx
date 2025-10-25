@@ -1,21 +1,43 @@
-import { Link, Outlet, useNavigate } from "react-router-dom";
-import { getToken, clearToken } from "./auth";
+import { BrowserRouter, Routes, Route, Link, Navigate } from "react-router-dom";
+import Login from "./pages/Login.jsx";
+import Signup from "./pages/Signup.jsx";
 
 export default function App() {
-  const nav = useNavigate();
-  const token = getToken();
   return (
-    <div style={{maxWidth: 760, margin: "32px auto", fontFamily: "system-ui, sans-serif"}}>
-      <header style={{display:"flex", justifyContent:"space-between", marginBottom:16}}>
-        <nav style={{display:"flex", gap:12}}>
-          <Link to="/home">Home</Link>
-          <Link to="/login">Login</Link>
-          <Link to="/signup">Signup</Link>
-          <Link to="/chats">Chats</Link>
-        </nav>
-        {token ? <button onClick={()=>{clearToken(); nav("/login");}}>Logout</button> : null}
-      </header>
-      <Outlet />
-    </div>
+    <BrowserRouter>
+      <nav style={styles.nav}>
+        <div />
+        <div style={{display:"flex", gap:16}}>
+          <Link to="/login" style={styles.link}>Войти</Link>
+          <Link to="/signup" style={styles.link}>Регистрация</Link>
+        </div>
+      </nav>
+
+      <Routes>
+        <Route path="/" element={<Navigate to="/signup" replace />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/login" element={<Login />} />
+        {/* если кто-то пойдёт на другие маршруты */}
+        <Route path="*" element={<Navigate to="/signup" replace />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
+
+const styles = {
+  nav: {
+    display: "flex",
+    justifyContent: "space-between",
+    padding: "12px 16px",
+    background: "#0b0b0b",
+    borderBottom: "1px solid #1e1e1e",
+    position: "sticky",
+    top: 0,
+    zIndex: 10,
+  },
+  link: {
+    color: "#7dd87d",
+    textDecoration: "none",
+    fontWeight: 600
+  }
+};
