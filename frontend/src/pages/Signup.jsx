@@ -4,20 +4,16 @@ import { useNavigate, Link } from "react-router-dom";
 
 export default function Signup() {
   const nav = useNavigate();
-
-  // шаги
   const [step, setStep] = useState(1);
 
-  // поля шага 1
   const [email, setEmail] = useState("");
   const [name, setName]   = useState("");
   const [city, setCity]   = useState("");
   const [age, setAge]     = useState("");
   const [bio, setBio]     = useState("");
 
-  // поля шага 2
-  const [password, setPassword]         = useState("");
-  const [password2, setPassword2]       = useState("");
+  const [password, setPassword]   = useState("");
+  const [password2, setPassword2] = useState("");
 
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
@@ -37,20 +33,14 @@ export default function Signup() {
 
     try {
       setLoading(true);
-      // backend пока принимает: email, password, name, city
-        const res = await signup({ email, password, name, city });
-
-        // если бэк возвращает токен — сохраняем его
-        if (res?.access_token) {
-            import("../auth").then(({ saveToken }) => {
-                saveToken(res.access_token);
-                nav("/profile");
-            });
-        } else {
-        // fallback, если токена нет
-            nav("/login");
-        }
-
+      const res = await signup({ email, password, name, city });
+      if (res?.access_token) {
+        const { saveToken } = await import("../auth");
+        saveToken(res.access_token);
+        nav("/profile");
+      } else {
+        nav("/login");
+      }
     } catch (e) {
       setErr(e?.message || "Ошибка регистрации");
     } finally {
@@ -59,151 +49,105 @@ export default function Signup() {
   };
 
   return (
-    <div style={styles.page}>
-      <div style={styles.logoBlock}>
-        <div style={styles.logoRow}>
-          <span style={styles.heart}>♥</span>
-          <h1 style={styles.logoText}>TiTi</h1>
-          <span style={styles.heart}>♥</span>
+    <div className="container-fluid min-vh-100 d-flex flex-column">
+      {/* центральная зона */}
+      <div className="container flex-grow-1 d-flex align-items-start align-items-md-center justify-content-center py-4">
+        <div className="w-100" style={{ maxWidth: 520 }}>
+          {/* логотип */}
+          <div className="text-center mb-3">
+            <div className="d-inline-flex align-items-center gap-2">
+              <span className="text-success fs-4">♥</span>
+              <h1 className="m-0 fw-bold" style={{letterSpacing: "1px"}}>TiTi</h1>
+              <span className="text-success fs-4">♥</span>
+            </div>
+            <div className="opacity-75 small mt-n1">for TITANIT</div>
+          </div>
+
+          {/* карточка формы */}
+          <div className="card shadow-lg p-4">
+            <h2 className="fw-bold mb-3">Расскажите о себе</h2>
+
+            {err && (
+              <div className="alert alert-danger py-2">{err}</div>
+            )}
+
+            {step === 1 ? (
+              <form onSubmit={goStep2} className="d-grid gap-3">
+                <input
+                  className="form-control"
+                  placeholder="Электронная почта"
+                  type="email"
+                  value={email}
+                  onChange={(e)=>setEmail(e.target.value)}
+                />
+                <input
+                  className="form-control"
+                  placeholder="Имя"
+                  value={name}
+                  onChange={(e)=>setName(e.target.value)}
+                />
+                <div className="row g-2">
+                  <div className="col-8">
+                    <input
+                      className="form-control"
+                      placeholder="Город"
+                      value={city}
+                      onChange={(e)=>setCity(e.target.value)}
+                    />
+                  </div>
+                  <div className="col-4">
+                    <input
+                      className="form-control"
+                      placeholder="Возраст"
+                      value={age}
+                      onChange={(e)=>setAge(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <textarea
+                  className="form-control"
+                  placeholder="О себе"
+                  rows={4}
+                  value={bio}
+                  onChange={(e)=>setBio(e.target.value)}
+                />
+                <button type="submit" className="btn btn-brand w-100" disabled={loading}>
+                    Искать людей
+                </button>
+                <div className="cta-underline"></div>
+              </form>
+            ) : (
+              <form onSubmit={doSignup} className="d-grid gap-3">
+                <input
+                  className="form-control"
+                  placeholder="Пароль"
+                  type="password"
+                  value={password}
+                  onChange={(e)=>setPassword(e.target.value)}
+                />
+                <input
+                  className="form-control"
+                  placeholder="Повторите пароль"
+                  type="password"
+                  value={password2}
+                  onChange={(e)=>setPassword2(e.target.value)}
+                />
+                <button type="submit" className="btn btn-brand w-100" disabled={loading}>
+                  Зарегистрироваться
+                </button>
+              </form>
+            )}
+
+            <hr className="border-secondary my-4" />
+            <div className="text-center">
+              Уже есть аккаунт?{" "}
+              <Link to="/login" className="fw-bold text-success text-decoration-underline">
+                Войти
+              </Link>
+            </div>
+          </div>
         </div>
-        <div style={styles.logoSub}>for TITANIT</div>
-      </div>
-
-      <h2 style={styles.title}>Расскажите о себе</h2>
-
-      {err && <div style={styles.err}>{err}</div>}
-
-      {step === 1 ? (
-        <form onSubmit={goStep2} style={styles.form}>
-          <input
-            placeholder="Электронная почта"
-            type="email"
-            value={email}
-            onChange={(e)=>setEmail(e.target.value)}
-            style={styles.input}
-          />
-          <input
-            placeholder="Имя"
-            value={name}
-            onChange={(e)=>setName(e.target.value)}
-            style={styles.input}
-          />
-          <input
-            placeholder="Город"
-            value={city}
-            onChange={(e)=>setCity(e.target.value)}
-            style={styles.input}
-          />
-          <input
-            placeholder="Возраст"
-            value={age}
-            onChange={(e)=>setAge(e.target.value)}
-            style={styles.input}
-          />
-          <textarea
-            placeholder="О себе"
-            value={bio}
-            onChange={(e)=>setBio(e.target.value)}
-            rows={4}
-            style={{...styles.input, resize:"vertical"}}
-          />
-          <button type="submit" style={styles.cta} disabled={loading}>
-            Искать людей
-          </button>
-          <div style={styles.underline}/>
-        </form>
-      ) : (
-        <form onSubmit={doSignup} style={styles.form}>
-          <input
-            placeholder="Пароль"
-            type="password"
-            value={password}
-            onChange={(e)=>setPassword(e.target.value)}
-            style={styles.input}
-          />
-          <input
-            placeholder="Повторите пароль"
-            type="password"
-            value={password2}
-            onChange={(e)=>setPassword2(e.target.value)}
-            style={styles.input}
-          />
-          <button type="submit" style={styles.cta} disabled={loading}>
-            Зарегистрироваться
-          </button>
-          <div style={styles.underline}/>
-        </form>
-      )}
-
-      <div style={styles.bottomNote}>
-        Уже есть аккаунт?{" "}
-        <Link to="/login" style={styles.loginLink}>Войти</Link>
       </div>
     </div>
   );
 }
-
-const styles = {
-  page: {
-    minHeight: "100vh",
-    background: "#0a0a0a",
-    color: "#fff",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    padding: "24px 16px",
-    fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
-  },
-  logoBlock: { marginTop: 24, marginBottom: 24, textAlign: "center" },
-  logoRow: { display: "flex", alignItems: "center", gap: 12 },
-  heart: { color: "#26de50", fontSize: 28, lineHeight: 1 },
-  logoText: { margin: 0, fontWeight: 800, letterSpacing: 1, fontSize: 36 },
-  logoSub: { opacity: 0.7, fontSize: 12, marginTop: -6 },
-  title: { fontSize: 28, margin: "8px 0 20px 0", fontWeight: 800 },
-  form: { width: "100%", maxWidth: 420, display: "grid", gap: 14 },
-  input: {
-    width: "100%",
-    background: "#1d1d1d",
-    border: "1px solid #2b2b2b",
-    borderRadius: 16,
-    color: "#eaeaea",
-    padding: "14px 16px",
-    fontSize: 16,
-    outline: "none",
-  },
-  cta: {
-    width: "100%",
-    padding: "14px 16px",
-    fontWeight: 800,
-    fontSize: 22,
-    borderRadius: 14,
-    background: "#0f0f0f",
-    color: "#fff",
-    border: "2px solid #26de50",
-    cursor: "pointer",
-  },
-  underline: {
-    width: "100%",
-    maxWidth: 420,
-    height: 6,
-    background: "linear-gradient(90deg, #26de50 0%, #26de50 100%)",
-    borderRadius: 8,
-    marginTop: 8,
-  },
-  bottomNote: { marginTop: 28, opacity: 0.9 },
-  loginLink: {
-    color: "#26de50",
-    fontWeight: 800,
-    textDecoration: "underline",
-    textUnderlineOffset: 3,
-  },
-  err: {
-    background: "#3a0f0f",
-    border: "1px solid #5a1a1a",
-    color: "#ffb3b3",
-    padding: "10px 12px",
-    borderRadius: 10,
-    marginBottom: 12,
-    maxWidth: 420,
-  },
-};
