@@ -46,12 +46,20 @@ def combine_profile_fields(profile: Profile) -> str:
 async def calculate_compatibility_matrix(db_session: AsyncSession) -> Tuple[Dict[int, int], np.ndarray]:
     """
     Извлекает профили из БД, вычисляет матрицу совместимости.
-
+    
     Returns:
         A tuple containing:
         - A dictionary mapping user_id to its index in the matrix.
         - A numpy array representing the compatibility matrix.
     """
+
+    result = await db_session.execute(select(Profile)) # <-- Здесь выбираются объекты Profile
+    profiles = result.scalars().all()
+    # ...
+    user_ids = [profile.user_id for profile in profiles] # <-- Извлекается user_id из каждого профиля
+    # ...
+    texts = [combine_profile_fields(profile) for profile in profiles] # <-- Извлекаются bio, skills, interests из профиля
+    # ...
     print("Fetching profiles from database...")
     # Получаем все профили
     result = await db_session.execute(select(Profile))

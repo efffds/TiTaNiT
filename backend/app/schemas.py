@@ -4,6 +4,10 @@ from pydantic import BaseModel, EmailStr
 from typing import List, Optional, Literal
 
 # --- Существующие схемы ---
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
