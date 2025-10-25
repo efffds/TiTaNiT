@@ -151,14 +151,14 @@ def find_matches(matrix: np.ndarray, user_id_to_index: Dict[int, int], threshold
 
 # --- Функция для сохранения совпадений в БД ---
 async def save_matches_to_db(db_session: AsyncSession, matches: Dict[int, List[int]]):
-    """Сохраняет словарь совпадений в таблицу `matches`."""
+    """Сохраняет словарь совпадений в таблицу `match_sets`."""
     from sqlalchemy.dialects.sqlite import insert # Используем upsert для SQLite
-    from .models import Match # Импортируем модель Match
+    from .models import MatchSet # Импортируем модель MatchSet (бывший Match для набора совпадений)
 
     print("Saving matches to database...")
     for user_id, matched_ids in matches.items():
         # Для SQLite используем INSERT ... ON CONFLICT (upsert)
-        stmt = insert(Match).values(user_id=user_id, matched_user_ids=matched_ids)
+        stmt = insert(MatchSet).values(user_id=user_id, matched_user_ids=matched_ids)
         stmt = stmt.on_conflict_do_update(
             index_elements=['user_id'],
             set_=dict(matched_user_ids=stmt.excluded.matched_user_ids)

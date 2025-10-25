@@ -1,6 +1,7 @@
 import torch
-from transformers import AutoTokenizer, AutoModel
+from transformers import AutoTokenizer, AutoModel, MarianMTModel, MarianTokenizer
 import torch.nn as nn
+
 
 # ----------------- Модель -----------------
 class TextEncoder(nn.Module):
@@ -22,11 +23,24 @@ class TextEncoder(nn.Module):
         emb = nn.functional.normalize(emb, p=2, dim=1)
         return emb
 
+
 # ----------------- Setup -----------------
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 tokenizer = AutoTokenizer.from_pretrained("sentence-transformers/paraphrase-MiniLM-L12-v2")
 text_enc = TextEncoder("sentence-transformers/paraphrase-MiniLM-L12-v2").to(device)
 text_enc.eval()
+
+# ----------------- Модель перевода RU -> EN -----------------
+trans_model_name = "Helsinki-NLP/opus-mt-ru-en"
+trans_tokenizer = MarianTokenizer.from_pretrained(trans_model_name)
+trans_model = MarianMTModel.from_pretrained(trans_model_name, use_safetensors=True).to(device)
+
+def translate_to_en(text: str):
+    """Переводит русский текст на английский"""
+    inputs = trans_tokenizer(text, return_tensors="pt", truncation=True, padding=True).to(device)
+    translated = trans_model.generate(**inputs)
+    return trans_tokenizer.decode(translated[0], skip_special_tokens=True)
+
 
 # ----------------- Функция similarity -----------------
 def text_similarity(text1: str, text2: str):
@@ -38,17 +52,31 @@ def text_similarity(text1: str, text2: str):
         sim = torch.matmul(emb1, emb2.t()).item()
     return sim
 
-# ----------------- Примеры -----------------
-profiles = [
-    "I love reading books and going for walks in nature.",
-    "Reading books and hiking are my favorite activities.",
-    "I hate reading books and prefer watching TV shows.",
-    "Sports and outdoor activities are my passion.",
-    "I love cooking and experimenting with recipes.",
-    "I enjoy cooking, especially new dishes."
+
+# ----------------- Профили на русском -----------------
+profiles_ru = [
+    "Я люблю читать книги и гулять на природе.",
+    "Чтение книг и походы — мои любимые занятия.",
+    "Я ненавижу читать книги и предпочитаю смотреть сериалы.",
+    "Спорт и активный отдых — моя страсть.",
+    "Я люблю готовить и экспериментировать с рецептами.",
+    "Мне нравится готовить, особенно новые блюда.",
+    "Обожаю путешествовать и открывать новые страны.",
+    "Люблю долгие прогулки по парку и слушать музыку.",
+    "Предпочитаю проводить вечера за настольными играми с друзьями.",
+    "Музыка — неотъемлемая часть моей жизни.",
+    "Фотография — моё хобби, люблю ловить красивые моменты."
 ]
 
+# ----------------- Перевод профилей на английский -----------------
+profiles = [translate_to_en(p) for p in profiles_ru]
+
+print("\nПереведённые профили:\n")
+for ru, en in zip(profiles_ru, profiles):
+    print(f"RU: {ru}\nEN: {en}\n")
+
 # ----------------- Сравнение всех анкет -----------------
+print("\nСравнение всех анкет:\n")
 for i in range(len(profiles)):
     for j in range(i+1, len(profiles)):
         sim = text_similarity(profiles[i], profiles[j])

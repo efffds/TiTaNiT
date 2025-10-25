@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { me, recs } from "../api";
+import { me, recs, swipe } from "../api";
 import { getToken } from "../auth";
 import { useNavigate } from "react-router-dom";
 
@@ -37,7 +37,11 @@ export default function Home() {
         <h3>Recommendations</h3>
         <ul>
           {items.map(({ user, score }) => (
-            <li key={user.id}><strong>{user.name}</strong> — {user.email} — score: {score}</li>
+            <li key={user.id} style={{display:"flex", gap:8, alignItems:"center"}}>
+              <span><strong>{user.name}</strong> — {user.email} — score: {score}</span>
+              <button onClick={async()=>{ try { const r = await swipe(token, user.id, 'like'); alert(r.match ? 'Match!' : 'Liked'); } catch(e){ alert(String(e.message||e)); } }}>Like</button>
+              <button onClick={async()=>{ try { await swipe(token, user.id, 'dislike'); alert('Disliked'); } catch(e){ alert(String(e.message||e)); } }}>Dislike</button>
+            </li>
           ))}
         </ul>
         {!items.length && <div>no items yet</div>}

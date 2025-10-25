@@ -96,3 +96,33 @@ class SwipeResponse(BaseModel):
 
 class MatchesResponse(BaseModel):
     user_ids: List[int]
+
+# --- Схемы для чатов ---
+class ChatOpenRequest(BaseModel):
+    target_user_id: int
+
+class ChatOpenResponse(BaseModel):
+    conversation_id: int
+
+class ConversationOut(BaseModel):
+    id: int
+    user1_id: int
+    user2_id: int
+
+    class Config:
+        from_attributes = True
+
+class ConversationsListResponse(BaseModel):
+    items: List[ConversationOut]
+
+class MessageIn(BaseModel):
+    body: str
+
+class MessageOut(BaseModel):
+    id: int
+    conversation_id: int
+    sender_id: int
+    body: str
+
+    class Config:
+        from_attributes = True

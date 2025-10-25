@@ -1,3 +1,16 @@
-export const getToken = () => localStorage.getItem("token") || "";
-export const setToken = (t) => t && localStorage.setItem("token", t);
-export const clearToken = () => localStorage.removeItem("token");
+// src/auth.js
+
+// Сохранить токен
+export function saveToken(token) {
+  localStorage.setItem("token", token);
+}
+
+// Получить токен
+export function getToken() {
+  return localStorage.getItem("token");
+}
+
+// Удалить токен (логаут)
+export function logout() {
+  localStorage.removeItem("token");
+}

@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException # Добавлен HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from ..db import get_async_session
+from ..security import get_current_user_id
 from ..models import User
-from ..security import get_current_user_id # Импортируем функцию аутентификации
-from ..schemas import UserRead # Импортируем схему для ответа
+from ..schemas import UserRead
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -12,23 +12,18 @@ router = APIRouter(prefix="/users", tags=["users"])
 def ping():
     return {"users": "pong"}
 
-# --- НОВОЕ: Эндпоинт для получения данных текущего пользователя ---
-@router.get("/me", response_model=UserRead) # <-- Добавлен эндпоинт /users/me
-async def get_current_user_profile(
-    current_user_id: int = Depends(get_current_user_id), # <-- Получаем ID из токена
-    db: AsyncSession = Depends(get_async_session)
-):
-    # Найти пользователя по ID из токена
-    result = await db.execute(select(User).where(User.id == current_user_id))
-    user = result.scalar_one_or_none()
-
+@router.get("/me", response_model=UserRead)
+async def me(current_user_id: int = Depends(get_current_user_id), db: AsyncSession = Depends(get_async_session)):
+    res = await db.execute(select(User).where(User.id == current_user_id))
+    user = res.scalar_one_or_none()
     if not user:
-        # В принципе, этого не должно произойти, если get_current_user_id работает правильно
-        # и пользователь не был удалён между логином и этим запросом
         raise HTTPException(status_code=404, detail="User not found")
-
-    # Вернуть данные пользователя
-    # Pydantic автоматически преобразует объект SQLAlchemy в UserRead
     return user
 
-# --- (Здесь могут быть и другие эндпоинты, например, /{user_id} для получения профиля другого пользователя) ---
+@router.get("/{user_id}", response_model=UserRead)
+async def get_user(user_id: int, db: AsyncSession = Depends(get_async_session)):
+    res = await db.execute(select(User).where(User.id == user_id))
+    user = res.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
