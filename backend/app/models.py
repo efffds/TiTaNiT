@@ -2,15 +2,16 @@
 
 from sqlalchemy import Column, Integer, String, Text, DateTime, func, JSON # Импортируем JSON
 from .db import Base # Импортируем Base из db.py
+from sqlalchemy.orm import Mapped, mapped_column
 
 class User(Base):
     __tablename__ = "users"
-    id = Column(Integer, primary_key=True, index=True)
-    email = Column(String(255), unique=True, index=True, nullable=False)
-    password_hash = Column(String(255), nullable=False) # Соответствует полю в схеме UserCreate (hashed_password)
-    name = Column(String(120), nullable=False)
-    city = Column(String(120), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    email: Mapped[str] = mapped_column(String(320), unique=True, index=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    city: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
 
 # --- НОВОЕ: Модель Profile ---
 class Profile(Base):
