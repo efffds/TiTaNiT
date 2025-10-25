@@ -14,11 +14,15 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
 # --- Утилиты ---
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+#pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto") # Убираем bcrypt
+
 security = HTTPBearer() # Создаем экземпляр HTTPBearer
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    #return pwd_context.hash(password)
+    truncated_password = password[:72]
+    return pwd_context.hash(truncated_password)
 
 def verify_password(password: str, password_hash: str) -> bool:
     return pwd_context.verify(password, password_hash)
