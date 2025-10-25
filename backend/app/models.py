@@ -62,13 +62,13 @@ class Match(Base):
 # ... (ваш существующий models.py) ...
 # ... (User, Profile) ...
 
-# --- НОВОЕ: Модель для хранения совпадений ---
-class Match(Base):
-    __tablename__ = "matches"
+# --- НОВОЕ: Кэш/набор совпадений для одного пользователя (переименовано) ---
+class MatchSet(Base):
+    __tablename__ = "match_sets"   # <— другая таблица, чтоб не конфликтовать с 'matches'
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, nullable=False, index=True) # ID пользователя, для которого найдены совпадения
-    matched_user_ids = Column(JSON) # Массив ID совпавших пользователей (например, [1, 5, 10])
+    user_id = Column(Integer, nullable=False, index=True)   # для кого набор
+    matched_user_ids = Column(JSON)                         # например: [1,5,10]
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
