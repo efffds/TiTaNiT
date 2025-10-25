@@ -1,6 +1,6 @@
 import sqlite3
 
-db = r"D:\Hack RND\titanit.db"
+db = r"D:\VSCodeProjects\hackaton\hackaton\titanit.db"
 conn = sqlite3.connect(db)
 cur = conn.cursor()
 
