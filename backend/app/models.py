@@ -59,17 +59,12 @@ class Match(Base):
 
 # class Message(Base): ...
 
-# ... (ваш существующий models.py) ...
-# ... (User, Profile) ...
-
-# --- НОВОЕ: Кэш/набор совпадений для одного пользователя (переименовано) ---
+# --- Кэш/набор совпадений для одного пользователя ---
 class MatchSet(Base):
-    __tablename__ = "match_sets"   # <— другая таблица, чтоб не конфликтовать с 'matches'
+    __tablename__ = "match_sets"   # отдельная таблица, чтобы не конфликтовать с 'matches'
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, nullable=False, index=True)   # для кого набор
     matched_user_ids = Column(JSON)                         # например: [1,5,10]
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-
-# ... (остальные модели) ...
