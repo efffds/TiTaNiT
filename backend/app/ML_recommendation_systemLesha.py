@@ -8,6 +8,7 @@ import pickle
 import numpy as np # Для удобной работы с матрицами
 from typing import Dict, List, Tuple
 import asyncio
+import json # Для десериализации JSON-полей из БД
 
 # --- Модель (скопирована из файла коллеги) ---
 class TextEncoder(nn.Module):
@@ -29,37 +30,37 @@ class TextEncoder(nn.Module):
         emb = nn.functional.normalize(emb, p=2, dim=1)
         return emb
 
-# --- Утилиты для работы с текстом ---
-def combine_profile_fields(profile: Profile) -> str:
-    """Объединяет текстовые поля профиля в одну строку для обработки моделью."""
-    parts = []
-    if profile.bio:
-        parts.append(profile.bio)
-    if profile.skills:
-        parts.append(" ".join(profile.skills))
-    if profile.interests:
-        parts.append(" ".join(profile.interests))
-    # Добавьте другие текстовые поля, если нужно (goals, name, city?)
-    return " ".join(parts)
+# --- Веса для каждого признака ---
+WEIGHTS = {
+    "bio": 0.15,
+    "skills": 0.25,
+    "interests": 0.25,
+    "goals": 0.2,
+    "city": 0.10,
+    "age": 0.05 # Важно: этот вес для *численного* расстояния по возрасту
+}
 
+# --- Функция для получения текста из поля (обрабатывает строки и списки строк) ---
+def get_text_from_field(field_value):
+    """Преобразует значение поля (строка или список строк) в одну строку."""
+    if not field_value:
+        return ""
+    if isinstance(field_value, list):
+        return " ".join(field_value)
+    return field_value
+
+# --- Функция для вычисления совместимости ---
 # --- Функция для вычисления совместимости ---
 async def calculate_compatibility_matrix(db_session: AsyncSession) -> Tuple[Dict[int, int], np.ndarray]:
     """
-    Извлекает профили из БД, вычисляет матрицу совместимости.
+    Извлекает профили из БД, вычисляет матрицу совместимости на основе
+    взвешенного суммирования сходства по отдельным признакам.
     
     Returns:
         A tuple containing:
         - A dictionary mapping user_id to its index in the matrix.
         - A numpy array representing the compatibility matrix.
     """
-
-    result = await db_session.execute(select(Profile)) # <-- Здесь выбираются объекты Profile
-    profiles = result.scalars().all()
-    # ...
-    user_ids = [profile.user_id for profile in profiles] # <-- Извлекается user_id из каждого профиля
-    # ...
-    texts = [combine_profile_fields(profile) for profile in profiles] # <-- Извлекаются bio, skills, interests из профиля
-    # ...
     print("Fetching profiles from database...")
     # Получаем все профили
     result = await db_session.execute(select(Profile))
@@ -72,10 +73,17 @@ async def calculate_compatibility_matrix(db_session: AsyncSession) -> Tuple[Dict
     user_ids = [profile.user_id for profile in profiles]
     user_id_to_index = {uid: idx for idx, uid in enumerate(user_ids)}
 
-    # Подготовим тексты
-    texts = [combine_profile_fields(profile) for profile in profiles]
+    # Подготовим списки данных для каждого признака
+    bios = [profile.bio or "" for profile in profiles] # Если bio None, используем пустую строку
+    # skills, interests, goals теперь просто строки, не нужно десериализовывать
+    skills_texts = [profile.skills or "" for profile in profiles]
+    interests_texts = [profile.interests or "" for profile in profiles]
+    goals_texts = [profile.goals or "" for profile in profiles]
 
-    print(f"Processing {len(texts)} profiles...")
+    cities = [profile.city or "" for profile in profiles]
+    ages = [profile.age for profile in profiles] # Список чисел
+
+    print(f"Processing {len(profiles)} profiles...")
 
     # --- Загрузка модели (лучше загружать один раз при старте приложения) ---
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -83,22 +91,72 @@ async def calculate_compatibility_matrix(db_session: AsyncSession) -> Tuple[Dict
     text_enc = TextEncoder("sentence-transformers/paraphrase-MiniLM-L12-v2").to(device)
     text_enc.eval()
 
-    # --- Векторизация текстов ---
-    print("Encoding texts...")
-    encoded_inputs = tokenizer(
-        texts, truncation=True, padding=True, max_length=512, return_tensors="pt"
-    ).to(device) # Увеличил max_length
+    num_profiles = len(profiles)
+    # Инициализируем матрицу сходства
+    compatibility_matrix = np.zeros((num_profiles, num_profiles))
 
-    with torch.no_grad():
-        embeddings = text_enc(input_ids=encoded_inputs["input_ids"], attention_mask=encoded_inputs["attention_mask"])
+    # --- Векторизация текстов для каждого признака отдельно ---
+    def encode_texts(texts):
+        if not any(texts): # Если все тексты пустые
+             return torch.zeros(len(texts), text_enc.proj.out_features).to(device)
+        encoded_inputs = tokenizer(
+            texts, truncation=True, padding=True, max_length=512, return_tensors="pt"
+        ).to(device)
+        with torch.no_grad():
+            embeddings = text_enc(input_ids=encoded_inputs["input_ids"], attention_mask=encoded_inputs["attention_mask"])
+        return embeddings
 
-    # --- Вычисление матрицы совместимости (косинусное сходство) ---
+    print("Encoding 'bio'...")
+    bio_embeddings = encode_texts(bios)
+    print("Encoding 'skills'...")
+    skills_embeddings = encode_texts(skills_texts)
+    print("Encoding 'interests'...")
+    interests_embeddings = encode_texts(interests_texts)
+    print("Encoding 'goals'...")
+    goals_embeddings = encode_texts(goals_texts)
+
+    # --- Вычисление матрицы совместимости ---
     print("Calculating compatibility matrix...")
-    similarity_matrix = torch.matmul(embeddings, embeddings.t()).cpu().numpy()
+    for i in range(num_profiles):
+        for j in range(i, num_profiles): # Матрица симметрична, можно вычислять только верхний треугольник
+            if i == j:
+                compatibility_matrix[i][j] = 1.0 # Совпадение с самим собой
+                continue
 
-    print(f"Compatibility matrix shape: {similarity_matrix.shape}")
-    return user_id_to_index, similarity_matrix
+            # Сходство по текстовым признакам (косинусное)
+            bio_sim = torch.matmul(bio_embeddings[i].unsqueeze(0), bio_embeddings[j].unsqueeze(0).t()).cpu().numpy().item()
+            skills_sim = torch.matmul(skills_embeddings[i].unsqueeze(0), skills_embeddings[j].unsqueeze(0).t()).cpu().numpy().item()
+            interests_sim = torch.matmul(interests_embeddings[i].unsqueeze(0), interests_embeddings[j].unsqueeze(0).t()).cpu().numpy().item()
+            goals_sim = torch.matmul(goals_embeddings[i].unsqueeze(0), goals_embeddings[j].unsqueeze(0).t()).cpu().numpy().item()
 
+            # Сходство по не-текстовым признакам
+            city_match = 1.0 if cities[i] and cities[j] and cities[i] == cities[j] else 0.0
+            # Сходство по возрасту: уменьшается с увеличением разницы (например, 1 / (1 + разница))
+            age_diff = abs(ages[i] - ages[j]) if ages[i] is not None and ages[j] is not None else float('inf')
+            if age_diff == float('inf'):
+                age_sim = 0.0
+            else:
+                age_sim = 1 / (1 + age_diff) # Простая функция схожести по возрасту
+
+            # Взвешенная сумма
+            total_similarity = (
+                WEIGHTS["bio"] * bio_sim +
+                WEIGHTS["skills"] * skills_sim +
+                WEIGHTS["interests"] * interests_sim +
+                WEIGHTS["goals"] * goals_sim +
+                WEIGHTS["city"] * city_match +
+                WEIGHTS["age"] * age_sim
+            )
+
+            # Нормализация (опционально, если веса уже в сумме дают 1.0)
+            # total_similarity = total_similarity / sum(WEIGHTS.values())
+
+            compatibility_matrix[i][j] = total_similarity
+            compatibility_matrix[j][i] = total_similarity # Симметрия
+
+    print(f"Compatibility matrix shape: {compatibility_matrix.shape}")
+    return user_id_to_index, compatibility_matrix
+# --- (Остальные функции остаются без изменений, если не используют combine_profile_fields) ---
 # --- Функция для сохранения матрицы ---
 def save_compatibility_matrix(user_id_to_index: Dict[int, int], matrix: np.ndarray, filename: str = "compatibility_matrix.pkl"):
     """Сохраняет матрицу совместимости и сопоставление ID в файл."""
@@ -139,26 +197,16 @@ def find_matches(matrix: np.ndarray, user_id_to_index: Dict[int, int], threshold
     print(f"Found matches for {len(matches)} users.")
     return matches
 
-# --- Модель для таблицы совпадений (добавить в models.py) ---
-# from sqlalchemy import Column, Integer, JSON # Уже импортировано где-то
-# from .db import Base # Уже импортировано где-то
-
-# class Match(Base):
-#     __tablename__ = "matches"
-#     id = Column(Integer, primary_key=True, index=True)
-#     user_id = Column(Integer, nullable=False, index=True)
-#     matched_user_ids = Column(JSON) # Массив ID совпавших пользователей
-
 # --- Функция для сохранения совпадений в БД ---
 async def save_matches_to_db(db_session: AsyncSession, matches: Dict[int, List[int]]):
-    """Сохраняет словарь совпадений в таблицу `match_sets`."""
+    """Сохраняет словарь совпадений в таблицу `matches`."""
     from sqlalchemy.dialects.sqlite import insert # Используем upsert для SQLite
-    from .models import MatchSet # Импортируем модель MatchSet (бывший Match для набора совпадений)
+    from .models import Match # Импортируем модель Match
 
     print("Saving matches to database...")
     for user_id, matched_ids in matches.items():
         # Для SQLite используем INSERT ... ON CONFLICT (upsert)
-        stmt = insert(MatchSet).values(user_id=user_id, matched_user_ids=matched_ids)
+        stmt = insert(Match).values(user_id=user_id, matched_user_ids=matched_ids)
         stmt = stmt.on_conflict_do_update(
             index_elements=['user_id'],
             set_=dict(matched_user_ids=stmt.excluded.matched_user_ids)

@@ -6,15 +6,16 @@ import sys
 import os
 
 # Добавляем корневую директорию проекта (где лежит папка backend) в путь поиска модулей
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# (Эта строка может быть не нужна, если запускаем из корня как модуль, но не мешает)
+# sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 # --- ИМПОРТЫ СТАЛИ АБСОЛЬТНЫМИ ---
-from backend.app.db import engine, Base, get_async_session
-from backend.app.models import Profile, Match # Импортируем модели Profile и Match из backend.app.models
-# Импортируем функции из ml_processing.py
-from backend.app.ml_processing import calculate_compatibility_matrix, find_matches, save_compatibility_matrix, save_matches_to_db
+from backend.app.db import engine, Base, get_async_session # <-- Абсолютный импорт
+from backend.app.models import Profile, Match # <-- Абсолютный импорт
+# Импортируем функции из ВАШЕГО файла ML-логики
+from backend.app.ML_recommendation_systemLesha import calculate_compatibility_matrix, find_matches, save_compatibility_matrix, save_matches_to_db
 # ------------------------------
 
 async def run_pipeline_from_script():

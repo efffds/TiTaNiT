@@ -24,9 +24,9 @@ class Profile(Base):
     city = Column(String(120), index=True)
     photo_url = Column(String(500))
     bio = Column(Text)
-    interests = Column(JSON)
-    skills = Column(JSON)
-    goals = Column(JSON)
+    interests = Column(String) # или Text
+    skills = Column(String)   # или Text
+    goals = Column(String)    # или Text
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
