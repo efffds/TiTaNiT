@@ -84,3 +84,14 @@ async def send_message(conversation_id: int, payload: MessageIn,
     await db.commit()
     await db.refresh(msg)
     return MessageOut.model_validate(msg)
+@router.delete("/{conversation_id}/messages/{message_id}", response_model=MessageOut)
+async def delete_message(conversation_id: int, message_id: int, current_user_id: int = Depends(get_current_user_id), db: AsyncSession = Depends(get_async_session)):
+    msg = await db.execute(select(Message).where(Message.id == message_id, Message.conversation_id == conversation_id))
+    msg = msg.scalar_one_or_none()
+    if not msg:
+        raise HTTPException(status_code=404, detail="Message not found")
+    if msg.sender_id != current_user_id:
+        raise HTTPException(status_code=403, detail="You can't delete this message")
+    await db.delete(msg)
+    await db.commit()
+    return MessageOut.model_validate(msg)
