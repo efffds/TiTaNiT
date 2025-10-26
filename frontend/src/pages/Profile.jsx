@@ -1,18 +1,30 @@
+// src/pages/Profile.jsx
 import { useEffect, useRef, useState } from "react";
-import { me, listPhotos, uploadPhoto, setPrimary, deletePhoto, getProfile, saveProfile } from "../api";
+import { me, listPhotos, uploadPhoto, setPrimary, deletePhoto } from "../api";
 import { getToken, logout } from "../auth";
-import { useNavigate, Link, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
-const LS_KEY = "titi_profile_draft";
+// === локальное хранение профиля ===
+const LS_PROFILE_KEY = "titanit:profile";
+function saveProfileLocal(data) {
+  localStorage.setItem(LS_PROFILE_KEY, JSON.stringify(data || {}));
+}
+function loadProfileLocal() {
+  const raw = localStorage.getItem(LS_PROFILE_KEY);
+  try {
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
 
 export default function Profile() {
   const token = getToken();
   const nav = useNavigate();
-  const loc = useLocation();
   const fileRef = useRef(null);
 
   const [user, setUser] = useState(null);
-  const [photos, setPhotos] = useState([]);
+  const [photos, setPhotos] = useState([]); // [{id, photo_path, is_primary?}]
   const [form, setForm] = useState({
     city: "",
     age: "",
@@ -23,64 +35,56 @@ export default function Profile() {
   });
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
-  const saveTimer = useRef(null);
 
-  // загрузка пользователя, фоток и профиля/черновика
+  // дебаунс-сейв формы
+  const [saveTick, setSaveTick] = useState(0);
   useEffect(() => {
-    if (!token) { nav("/login"); return; }
+    if (!token) return;
+    const t = setTimeout(() => {
+      saveProfileLocal(form);
+    }, 500);
+    return () => clearTimeout(t);
+  }, [form, token]);
 
+  useEffect(() => {
+    if (!token) {
+      nav("/login");
+      return;
+    }
     (async () => {
       try {
         setErr("");
-        const u = await me(token);
-        setUser(u);
 
-        // 1) подтянуть профиль с бэка (если есть)
-        try {
-          const p = await getProfile(token);
-          if (p && typeof p === "object") {
-            setForm((f) => ({ ...f, ...p }));
-            // обновим черновик локально
-            localStorage.setItem(LS_KEY, JSON.stringify({ ...form, ...p }));
-          }
-        } catch {
-          // 2) если бэка нет — взять из локального черновика
-          const raw = localStorage.getItem(LS_KEY);
-          if (raw) {
-            try { setForm(JSON.parse(raw)); } catch {}
-          } else if (u?.city) {
-            setForm((f) => ({ ...f, city: u.city }));
-          }
+        // 1) поднимем локальные данные сразу (UX)
+        const local = loadProfileLocal();
+        if (Object.keys(local).length) {
+          setForm((f) => ({ ...f, ...local }));
         }
 
-        // фото (если эндпоинт есть)
+        // 2) загрузим пользователя с бэка (минимум city)
+        const u = await me(token);
+        setUser(u);
+        if (u?.city) {
+          setForm((f) => ({ ...f, city: u.city }));
+        }
+
+        // 3) загрузим фото (если доступно)
         try {
           const ph = await listPhotos(token);
           const items = ph.items || ph || [];
           setPhotos(items);
-        } catch {}
+        } catch (_) {
+          // ничего, если эндпоинта нет
+        }
       } catch (e) {
         setErr(e.message || String(e));
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [token, nav, saveTick]);
 
-  // локальное и серверное автосохранение с debounce
-  useEffect(() => {
-    // сохраняем в localStorage мгновенно
-    localStorage.setItem(LS_KEY, JSON.stringify(form));
-
-    // и пытаемся отправить на бэк через 800мс (если он есть)
-    clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(async () => {
-      try { await saveProfile(form, token); } catch {}
-    }, 800);
-
-    return () => clearTimeout(saveTimer.current);
-  }, [form, token]);
-
-  function onPickFile() { fileRef.current?.click(); }
+  function onPickFile() {
+    fileRef.current?.click();
+  }
 
   async function onFileChosen(e) {
     const file = e.target.files?.[0];
@@ -88,8 +92,21 @@ export default function Profile() {
     try {
       setLoading(true);
       const res = await uploadPhoto(file, token);
-      const added = { id: res.id, photo_path: res.photo_path, is_primary: false };
-      setPhotos((p) => [added, ...p]);
+      const added = {
+        id: res.id,
+        photo_path: res.photo_path,
+        is_primary: !!res.is_primary,
+      };
+      setPhotos((p) => {
+        const next = [added, ...p];
+        // если это первое фото — сделаем его основным и вперед
+        if (next.length === 1) {
+          return next.map((x, i) => ({ ...x, is_primary: i === 0 }));
+        }
+        // главное фото — первым
+        next.sort((a, b) => (b.is_primary === true) - (a.is_primary === true));
+        return next;
+      });
     } catch (e) {
       setErr(e.message || "Не удалось загрузить фото");
     } finally {
@@ -101,7 +118,7 @@ export default function Profile() {
   async function makePrimary(id) {
     try {
       setLoading(true);
-      try { await setPrimary(id, token); } catch {}
+      try { await setPrimary(id, token); } catch (_) {}
       setPhotos((arr) => {
         const withFlag = arr.map((p) => ({ ...p, is_primary: p.id === id }));
         withFlag.sort((a, b) => (b.is_primary === true) - (a.is_primary === true));
@@ -118,7 +135,7 @@ export default function Profile() {
     if (!confirm("Удалить фото?")) return;
     try {
       setLoading(true);
-      try { await deletePhoto(id, token); } catch {}
+      try { await deletePhoto(id, token); } catch (_) {}
       setPhotos((p) => p.filter((x) => x.id !== id));
     } catch (e) {
       setErr(e.message || "Не удалось удалить фото");
@@ -134,11 +151,17 @@ export default function Profile() {
       : `${import.meta.env.VITE_API_URL || "http://127.0.0.1:8000"}/${path.replace(/^\/+/, "")}`;
   }
 
-  function doLogout() { logout(); nav("/login"); }
+  const primaryPhoto = photos.find((p) => p.is_primary);
+  const primaryUrl = primaryPhoto?.photo_path ? fullUrl(primaryPhoto.photo_path) : "";
+
+  function doLogout() {
+    logout();
+    nav("/login");
+  }
 
   return (
     <div className="container py-4">
-      {/* top bar */}
+      {/* Верхняя панель */}
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h3 className="text-white m-0">Профиль</h3>
         <button className="btn btn-outline-light" onClick={doLogout}>Выйти</button>
@@ -146,17 +169,13 @@ export default function Profile() {
 
       {err && <div className="alert alert-danger">{err}</div>}
 
-      {/* карточка шапки */}
+      {/* Карточка пользователя */}
       <div className="card bg-dark text-white mb-4">
         <div className="card-body">
           <div className="d-flex align-items-center gap-3">
             <div style={{ width: 72, height: 72, borderRadius: "50%", overflow: "hidden", border: "3px solid #26de50" }}>
               <img
-                src={
-                  photos.find(p => p.is_primary)?.photo_path
-                    ? fullUrl(photos.find(p => p.is_primary).photo_path)
-                    : "https://via.placeholder.com/150?text=No+Photo"
-                }
+                src={primaryUrl || "https://via.placeholder.com/150?text=No+Photo"}
                 alt=""
                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
               />
@@ -169,7 +188,7 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* фото-сетка */}
+      {/* Фото-сетка + добавление */}
       <div className="mb-4">
         <div className="d-flex align-items-center justify-content-between mb-2">
           <div className="text-white fw-semibold">Фотографии</div>
@@ -189,6 +208,7 @@ export default function Profile() {
                   className="img-fluid rounded"
                   style={{ aspectRatio: "1 / 1", objectFit: "cover", width: "100%" }}
                 />
+                {/* Оверлей кнопок */}
                 <div className="position-absolute top-0 end-0 p-2 d-flex gap-2">
                   <button
                     title="Сделать основным"
@@ -208,6 +228,7 @@ export default function Profile() {
               </div>
             </div>
           ))}
+          {/* Плитка-заглушка для добавления фоток кликом */}
           <div className="col-6 col-md-4 col-lg-3">
             <div
               className="d-flex align-items-center justify-content-center border rounded text-success"
@@ -220,72 +241,93 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* анкетные поля */}
+      {/* Поля профиля (локально; бэк — когда появится эндпоинт) */}
       <div className="card bg-dark text-white mb-5">
         <div className="card-body">
           <div className="row g-3">
             <div className="col-md-6">
-              <label className="form-label text-white">Город</label>
-              <input className="form-control bg-secondary-subtle text-white border-0"
-                     value={form.city}
-                     onChange={(e)=>setForm({...form, city: e.target.value})}/>
+              <label className="form-label text-white-50">Город</label>
+              <input
+                className="form-control bg-secondary-subtle text-white border-0"
+                value={form.city}
+                onChange={(e)=>setForm({...form, city: e.target.value})}
+              />
             </div>
             <div className="col-md-6">
-              <label className="form-label text-white">Возраст</label>
-              <input className="form-control bg-secondary-subtle text-white border-0"
-                     value={form.age}
-                     onChange={(e)=>setForm({...form, age: e.target.value})}/>
+              <label className="form-label text-white-50">Возраст</label>
+              <input
+                className="form-control bg-secondary-subtle text-white border-0"
+                value={form.age}
+                onChange={(e)=>setForm({...form, age: e.target.value})}
+              />
             </div>
             <div className="col-12">
-              <label className="form-label text-white">О себе</label>
-              <textarea rows={3}
-                        className="form-control bg-secondary-subtle text-white border-0"
-                        value={form.bio}
-                        onChange={(e)=>setForm({...form, bio: e.target.value})}/>
+              <label className="form-label text-white-50">О себе</label>
+              <textarea
+                rows={3}
+                className="form-control bg-secondary-subtle text-white border-0"
+                value={form.bio}
+                onChange={(e)=>setForm({...form, bio: e.target.value})}
+              />
             </div>
             <div className="col-md-4">
-              <label className="form-label text-white">Навыки</label>
-              <input className="form-control bg-secondary-subtle text-white border-0"
-                     value={form.skills}
-                     onChange={(e)=>setForm({...form, skills: e.target.value})}/>
+              <label className="form-label text-white-50">Навыки</label>
+              <input
+                className="form-control bg-secondary-subtle text-white border-0"
+                placeholder="python, sql…"
+                value={form.skills}
+                onChange={(e)=>setForm({...form, skills: e.target.value})}
+              />
             </div>
             <div className="col-md-4">
-              <label className="form-label text-white">Интересы</label>
-              <input className="form-control bg-secondary-subtle text-white border-0"
-                     value={form.interests}
-                     onChange={(e)=>setForm({...form, interests: e.target.value})}/>
+              <label className="form-label text-white-50">Интересы</label>
+              <input
+                className="form-control bg-secondary-subtle text-white border-0"
+                placeholder="спорт, кино…"
+                value={form.interests}
+                onChange={(e)=>setForm({...form, interests: e.target.value})}
+              />
             </div>
             <div className="col-md-4">
-              <label className="form-label text-white">Цели</label>
-              <input className="form-control bg-secondary-subtle text-white border-0"
-                     value={form.goals}
-                     onChange={(e)=>setForm({...form, goals: e.target.value})}/>
+              <label className="form-label text-white-50">Цели</label>
+              <input
+                className="form-control bg-secondary-subtle text-white border-0"
+                placeholder="друзья, проекты…"
+                value={form.goals}
+                onChange={(e)=>setForm({...form, goals: e.target.value})}
+              />
             </div>
           </div>
         </div>
       </div>
 
-      {/* нижняя навигация с иконкой профиля */}
+      {/* Нижняя навигация с аватаркой */}
       <nav className="navbar fixed-bottom bg-dark-subtle" style={{borderTop: "1px solid #222"}}>
         <div className="container d-flex justify-content-around">
-          <NavBtn to="/cards" label="Анкеты" active={loc.pathname === "/cards"} icon="📋" />
-          <NavBtn to="/likes" label="Лайки" active={loc.pathname === "/likes"} icon="❤️" />
-          <NavBtn to="/messages" label="Сообщения" active={loc.pathname === "/messages"} icon="💬" />
-          <NavBtn to="/meetings" label="Встречи" active={loc.pathname === "/meetings"} icon="📅" />
-          <NavBtn to="/profile" label="Профиль" active={loc.pathname === "/profile"} icon="👤" />
+          <BottomIcon label="Анкеты" active />
+          <BottomIcon label="Лайки" />
+          <BottomIcon label="Сообщения" />
+          <BottomIcon label="Встречи" />
+          <BottomIcon label="Профиль" avatarUrl={primaryUrl} />
         </div>
       </nav>
     </div>
   );
 }
 
-function NavBtn({ to, label, active, icon }) {
+function BottomIcon({ label, active, avatarUrl }) {
   return (
-    <Link to={to} className="text-decoration-none text-center">
-      <div style={{ color: active ? "#26de50" : "#bbb", fontWeight: 700 }}>
-        <div style={{ fontSize: 18, lineHeight: 1 }}>{icon}</div>
-        <div style={{ fontSize: 12 }}>{label}</div>
-      </div>
-    </Link>
+    <div className="text-center" style={{ color: active ? "#26de50" : "#bbb", fontWeight: 600 }}>
+      {avatarUrl ? (
+        <img
+          src={avatarUrl}
+          alt=""
+          style={{ width: 22, height: 22, borderRadius: "50%", objectFit: "cover", border: "2px solid #26de50" }}
+        />
+      ) : (
+        <div style={{ fontSize: 18 }}>♥</div>
+      )}
+      <div style={{ fontSize: 12 }}>{label}</div>
+    </div>
   );
 }
