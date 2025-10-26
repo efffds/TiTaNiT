@@ -7,6 +7,8 @@ from .routers import auth, users, recommendations, analytics
 from .routers import chat as chat_router
 from .db import Base, engine  # <-- импорт именно из db.py
 from .routers import photos # <-- НОВОЕ: Импортируем photos
+from fastapi.staticfiles import StaticFiles
+from .routers import profile
 
 # Создание таблиц при запуске
 async def create_tables():
@@ -43,6 +45,8 @@ app.include_router(recommendations.router)
 app.include_router(analytics.router)
 app.include_router(chat_router.router)
 app.include_router(photos.router) # <-- НОВОЕ: Подключаем роутер photos
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+app.include_router(profile.router)
 
 # Роутер свайпов (лайки/дизлайки)
 from .routers import likes as likes_router  # импорт после создания app, чтобы избежать циклов

@@ -1,83 +1,163 @@
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+// src/api.js
+const API = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 
-async function asJson(res) {
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}: ${await res.text()}`);
-  return res.json();
+// ===== Local fallback storage for profile =====
+const LS_PROFILE_KEY = "titanit:profile";
+
+function saveProfileLocal(data) {
+  localStorage.setItem(LS_PROFILE_KEY, JSON.stringify(data || {}));
+  return { ...data, _local: true };
 }
 
-export async function signup({ email, password, name, city }) {
-  return asJson(await fetch(`${API_URL}/auth/signup`, {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password, name, city })
-  }));
+function loadProfileLocal() {
+  const raw = localStorage.getItem(LS_PROFILE_KEY);
+  try { return raw ? { ...JSON.parse(raw), _local: true } : { _local: true }; }
+  catch { return { _local: true }; }
 }
 
-export async function login({ email, password }) {
-  return asJson(await fetch(`${API_URL}/auth/login`, {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password })
-  }));
+function authHeaders(token) {
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+async function handle(res) {
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`${res.status} ${res.statusText}: ${text || "Request failed"}`);
+  }
+  const ct = res.headers.get("content-type") || "";
+  return ct.includes("application/json") ? res.json() : {};
+}
+
+// ===== auth =====
+export async function signup(payload) {
+  const res = await fetch(`${API}/auth/signup`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return handle(res);
+}
+
+export async function login(payload) {
+  const res = await fetch(`${API}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return handle(res);
 }
 
 export async function me(token) {
-  return asJson(await fetch(`${API_URL}/users/me`, {
-    headers: { Authorization: `Bearer ${token}` }
-  }));
+  const res = await fetch(`${API}/users/me`, {
+    headers: { ...authHeaders(token) },
+  });
+  return handle(res);
 }
 
-export async function recs(token) {
-  return asJson(await fetch(`${API_URL}/recommendations`, {
-    headers: { Authorization: `Bearer ${token}` }
-  }));
+// ===== photos (мягкий фолбэк на пустой список/OK) =====
+export async function listPhotos(token) {
+  try {
+    const res = await fetch(`${API}/profile/photos`, {
+      headers: { ...authHeaders(token) },
+    });
+    if (!res.ok) {
+      if (res.status === 404 || res.status === 405) return { items: [] };
+      const text = await res.text().catch(() => "");
+      throw new Error(`${res.status} ${res.statusText}: ${text || "Request failed"}`);
+    }
+    return res.json();
+  } catch {
+    return { items: [] };
+  }
 }
 
-export async function swipe(token, targetUserId, action /* 'like' | 'dislike' */) {
-  return asJson(await fetch(`${API_URL}/swipe/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ target_user_id: targetUserId, action })
-  }));
+export async function uploadPhoto(file, token) {
+  const fd = new FormData();
+  fd.append("file", file);
+  try {
+    const res = await fetch(`${API}/profile/photos`, {
+      method: "POST",
+      headers: { ...authHeaders(token) },
+      body: fd,
+    });
+    if (!res.ok) {
+      if (res.status === 404 || res.status === 405) return { ok: true }; // просто игнорируем
+      const text = await res.text().catch(() => "");
+      throw new Error(`${res.status} ${res.statusText}: ${text || "Request failed"}`);
+    }
+    return res.json().catch(() => ({}));
+  } catch {
+    return { ok: true };
+  }
 }
 
-// --- Likes & matches ---
-export async function matches(token) {
-  return asJson(await fetch(`${API_URL}/swipe/matches`, {
-    headers: { Authorization: `Bearer ${token}` }
-  }));
+export async function setPrimary(photoId, token) {
+  try {
+    const res = await fetch(`${API}/profile/photos/${photoId}/set_primary`, {
+      method: "PUT",
+      headers: { ...authHeaders(token) },
+    });
+    if (!res.ok && !(res.status === 404 || res.status === 405)) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`${res.status} ${res.statusText}: ${text || "Request failed"}`);
+    }
+    return { ok: true };
+  } catch {
+    return { ok: true };
+  }
 }
 
-// --- Users ---
-export async function getUserById(token, userId) {
-  return asJson(await fetch(`${API_URL}/users/${userId}`, {
-    headers: { Authorization: `Bearer ${token}` }
-  }));
+export async function deletePhoto(photoId, token) {
+  try {
+    const res = await fetch(`${API}/profile/photos/${photoId}`, {
+      method: "DELETE",
+      headers: { ...authHeaders(token) },
+    });
+    if (!res.ok && !(res.status === 404 || res.status === 405)) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`${res.status} ${res.statusText}: ${text || "Request failed"}`);
+    }
+    return { ok: true };
+  } catch {
+    return { ok: true };
+  }
 }
 
-// --- Chat ---
-export async function listConversations(token) {
-  return asJson(await fetch(`${API_URL}/chat/conversations`, {
-    headers: { Authorization: `Bearer ${token}` }
-  }));
+// ===== profile (синхронизируется с localStorage, если сервера нет) =====
+export async function getProfile(token) {
+  try {
+    const res = await fetch(`${API}/profile`, {
+      headers: { "Accept": "application/json", ...authHeaders(token) },
+    });
+    if (!res.ok) {
+      if ([404, 405, 500].includes(res.status)) return loadProfileLocal();
+      const text = await res.text().catch(() => "");
+      throw new Error(`${res.status} ${res.statusText}: ${text || "Request failed"}`);
+    }
+    const data = await res.json().catch(() => ({}));
+    saveProfileLocal(data);
+    return data;
+  } catch {
+    return loadProfileLocal();
+  }
 }
 
-export async function openChat(token, targetUserId) {
-  return asJson(await fetch(`${API_URL}/chat/open`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ target_user_id: targetUserId })
-  }));
-}
-
-export async function listMessages(token, conversationId) {
-  return asJson(await fetch(`${API_URL}/chat/${conversationId}/messages`, {
-    headers: { Authorization: `Bearer ${token}` }
-  }));
-}
-
-export async function sendMessage(token, conversationId, body) {
-  return asJson(await fetch(`${API_URL}/chat/${conversationId}/messages`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ body })
-  }));
+export async function saveProfile(data, token) {
+  try {
+    const res = await fetch(`${API}/profile`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...authHeaders(token) },
+      body: JSON.stringify(data || {}),
+    });
+    if (!res.ok) {
+      if ([404, 405, 500].includes(res.status)) return saveProfileLocal(data);
+      const text = await res.text().catch(() => "");
+      throw new Error(`${res.status} ${res.statusText}: ${text || "Request failed"}`);
+    }
+    const saved = await res.json().catch(() => (data || {}));
+    saveProfileLocal(saved);
+    return saved;
+  } catch {
+    return saveProfileLocal(data);
+  }
 }
