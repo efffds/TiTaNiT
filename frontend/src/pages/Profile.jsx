@@ -167,7 +167,7 @@ export default function Profile() {
     try {
       setRecErr("");
       setRecLoading(true);
-      const resp = await recs(token, { interests: form.interests, skills: form.skills, goals: form.goals });
+      const resp = await recs(token);
       setRecItems(resp.items || []);
       if (!resp.items || !resp.items.length) {
         setRecErr("По вашим данным пока нет рекомендаций");
