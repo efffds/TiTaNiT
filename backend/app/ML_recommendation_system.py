@@ -6,6 +6,7 @@ from transformers import AutoTokenizer, AutoModel, MarianMTModel, MarianTokenize
 import torch.nn as nn
 import numpy as np
 import asyncio
+import json
 
 # --- Модель для эмбеддингов (TextEncoder) ---
 class TextEncoder(nn.Module):
@@ -303,7 +304,7 @@ def main():
     print(matrix)
 
     # Найти совпадения
-    matches = find_matches(matrix, user_id_to_index, threshold=0.1) # Понизим порог для демонстрации
+    matches = find_matches(matrix, user_id_to_index, threshold=0.5) # Понизим порог для демонстрации
 
     print("\nMatches found:")
     for user_id, matched_ids in matches.items():
