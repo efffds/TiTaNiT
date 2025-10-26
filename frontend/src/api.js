@@ -123,6 +123,26 @@ export async function deletePhoto(photoId, token) {
   }
 }
 
+// ===== recommendations =====
+export async function recs(token, { interests, skills, goals } = {}) {
+  try {
+    const q = new URLSearchParams();
+    if (interests) q.set("interests", String(interests));
+    if (skills) q.set("skills", String(skills));
+    if (goals) q.set("goals", String(goals));
+    const url = `${API}/recommendations/${q.toString() ? `?${q.toString()}` : ""}`;
+    const res = await fetch(url, { headers: { ...authHeaders(token) } });
+    if (!res.ok) {
+      if ([404,405,500].includes(res.status)) return { items: [] };
+      const text = await res.text().catch(() => "");
+      throw new Error(`${res.status} ${res.statusText}: ${text || "Request failed"}`);
+    }
+    return res.json();
+  } catch {
+    return { items: [] };
+  }
+}
+
 // ===== profile (синхронизируется с localStorage, если сервера нет) =====
 export async function getProfile(token) {
   try {

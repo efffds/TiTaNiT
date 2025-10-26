@@ -1,6 +1,6 @@
 // src/pages/Profile.jsx
-import { useEffect, useRef, useState } from "react";
-import { me, listPhotos, uploadPhoto, setPrimary, deletePhoto } from "../api";
+import { useEffect, useRef, useState, useMemo } from "react";
+import { me, listPhotos, uploadPhoto, setPrimary, deletePhoto, recs } from "../api";
 import { getToken, logout } from "../auth";
 import { useNavigate } from "react-router-dom";
 
@@ -35,6 +35,9 @@ export default function Profile() {
   });
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
+  const [recLoading, setRecLoading] = useState(false);
+  const [recErr, setRecErr] = useState("");
+  const [recItems, setRecItems] = useState([]);
 
   // дебаунс-сейв формы
   const [saveTick, setSaveTick] = useState(0);
@@ -154,6 +157,28 @@ export default function Profile() {
   const primaryPhoto = photos.find((p) => p.is_primary);
   const primaryUrl = primaryPhoto?.photo_path ? fullUrl(primaryPhoto.photo_path) : "";
 
+  const canSearch = useMemo(() => {
+    const hasPhoto = photos.length > 0;
+    const hasInfo = Boolean((form.interests || "").trim() || (form.skills || "").trim() || (form.goals || "").trim());
+    return hasPhoto && hasInfo;
+  }, [photos, form.interests, form.skills, form.goals]);
+
+  async function doSearch() {
+    try {
+      setRecErr("");
+      setRecLoading(true);
+      const resp = await recs(token, { interests: form.interests, skills: form.skills, goals: form.goals });
+      setRecItems(resp.items || []);
+      if (!resp.items || !resp.items.length) {
+        setRecErr("По вашим данным пока нет рекомендаций");
+      }
+    } catch (e) {
+      setRecErr(e.message || String(e));
+    } finally {
+      setRecLoading(false);
+    }
+  }
+
   function doLogout() {
     logout();
     nav("/login");
@@ -242,7 +267,7 @@ export default function Profile() {
       </div>
 
       {/* Поля профиля (локально; бэк — когда появится эндпоинт) */}
-      <div className="card bg-dark text-white mb-5">
+      <div className="card bg-dark text-white mb-3">
         <div className="card-body">
           <div className="row g-3">
             <div className="col-md-6">
@@ -298,6 +323,55 @@ export default function Profile() {
               />
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Кнопка поиска и результаты */}
+      <div className="card bg-dark text-white mb-5">
+        <div className="card-body">
+          <div className="d-flex flex-column flex-md-row gap-2 align-items-start align-items-md-center justify-content-between mb-3">
+            <div className="text-white-50">Заполните интересы/навыки/цели и добавьте фото, затем нажмите поиск.</div>
+            <button className="btn btn-success fw-semibold" disabled={!canSearch || recLoading} onClick={doSearch}>
+              {recLoading ? "Ищем…" : "Искать людей"}
+            </button>
+          </div>
+          {recErr && <div className="alert alert-warning py-2">{recErr}</div>}
+          {!!recItems.length && (
+            <div className="row g-3">
+              {recItems.map((it, idx) => (
+                <div className="col-12 col-md-6 col-lg-4" key={it.user?.id || idx}>
+                  <div className="card bg-black text-white h-100">
+                    <div className="card-body d-flex gap-3">
+                      <div style={{ width: 64, height: 64, borderRadius: "8px", overflow: "hidden", flex: "0 0 64px", border: "2px solid #26de50" }}>
+                        <img src={it.user?.photo_path ? fullUrl(it.user.photo_path) : (primaryUrl || "https://via.placeholder.com/150?text=No+Photo")}
+                             alt=""
+                             style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      </div>
+                      <div className="flex-grow-1">
+                        <div className="d-flex justify-content-between align-items-start">
+                          <div>
+                            <div className="fw-bold">{it.user?.name || "—"}</div>
+                            <div className="text-secondary small">{it.user?.city || "—"}</div>
+                          </div>
+                          <span className="badge text-bg-success">{Math.round((it.score || 0) * 100)}%</span>
+                        </div>
+                        {(it.shared_interests?.length || it.shared_skills?.length) ? (
+                          <div className="mt-2 d-flex flex-wrap gap-1">
+                            {it.shared_interests?.slice(0,3).map((t)=> (
+                              <span key={`i-${t}`} className="badge text-bg-secondary">{t}</span>
+                            ))}
+                            {it.shared_skills?.slice(0,3).map((t)=> (
+                              <span key={`s-${t}`} className="badge text-bg-secondary">{t}</span>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
