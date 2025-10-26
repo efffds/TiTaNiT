@@ -45,7 +45,7 @@ async def list_recommendations(
             select(UserPhoto).where(UserPhoto.user_id.in_(user_ids)).order_by(
                 UserPhoto.user_id.asc(),
                 UserPhoto.is_primary.desc(),
-                UserPhoto.upload_order.asc().nulls_last(),
+                func.coalesce(UserPhoto.upload_order, 999999).asc(),
                 UserPhoto.uploaded_at.desc(),
             )
         )
@@ -121,7 +121,7 @@ async def list_recommendations(
         photo_res = await db.execute(
             select(UserPhoto).where(UserPhoto.user_id == user.id).order_by(
                 UserPhoto.is_primary.desc(),
-                UserPhoto.upload_order.asc().nulls_last(),
+                func.coalesce(UserPhoto.upload_order, 999999).asc(),
                 UserPhoto.uploaded_at.desc(),
             )
         )
