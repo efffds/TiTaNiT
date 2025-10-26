@@ -1,8 +1,10 @@
 # backend/app/models.py
 
-from sqlalchemy import Column, Integer, String, Text, DateTime, func, JSON, Boolean, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Text, DateTime, func, JSON, Boolean, UniqueConstraint, ForeignKey
 from .db import Base
 from sqlalchemy.orm import Mapped, mapped_column
+from typing import List # Добавим импорт для аннотаций (опционально, если используем Pydantic)
+
 
 class User(Base):
     __tablename__ = "users"
@@ -13,7 +15,7 @@ class User(Base):
     city: Mapped[str | None] = mapped_column(String(100), nullable=True)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
 
-# --- Профиль пользователя ---
+# --- Профиль пользователя (без photo_url) ---
 class Profile(Base):
     __tablename__ = "profiles"
 
@@ -22,13 +24,30 @@ class Profile(Base):
     name = Column(String(120), index=True)
     age = Column(Integer)
     city = Column(String(120), index=True)
-    photo_url = Column(String(500))
+    # photo_url = Column(String(500))  # <-- УДАЛЕНО
     bio = Column(Text)
     interests = Column(String) # или Text
     skills = Column(String)   # или Text
     goals = Column(String)    # или Text
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+# --- Новая таблица для фотографий пользователей ---
+class UserPhoto(Base):
+    __tablename__ = "user_photos"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True) # Связь с таблицей users
+    # photo_url = Column(String(500), nullable=False) # URL к изображению
+    photo_path = Column(String(500), nullable=False) # Путь к файлу на сервере (предпочтительнее)
+    is_primary = Column(Boolean, default=False) # Флаг: основное фото
+    upload_order = Column(Integer) # Порядок отображения (опционально)
+    uploaded_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Уникальность upload_order для пользователя (опционально, если используется)
+    # __table_args__ = (
+    #     UniqueConstraint("user_id", "upload_order", name="uq_user_photo_order"),
+    # )
 
 # --- Лайки/дизлайки между пользователями ---
 class Like(Base):

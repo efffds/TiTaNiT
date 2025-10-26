@@ -2,6 +2,7 @@
 
 from pydantic import BaseModel, EmailStr
 from typing import List, Optional, Literal
+from datetime import datetime
 
 # --- Существующие схемы ---
 class UserLogin(BaseModel):
@@ -49,12 +50,22 @@ class UserInterestsResponse(BaseModel):
 class SocialFieldResponse(BaseModel):
     data: List[CitySkills]
 
+class UserPhotoOut(BaseModel):
+    id: int
+    photo_path: str # или photo_url, в зависимости от того, что вы возвращаете
+    is_primary: bool
+    upload_order: Optional[int] # Может быть None, если не используется
+    uploaded_at: Optional[datetime] # Добавим, если в модели есть дата
+
+    class Config:
+        from_attributes = True
+
 # --- Схемы для профиля ---
 class ProfileCreateUpdate(BaseModel):
     name: Optional[str] = None
     age: Optional[int] = None
     city: Optional[str] = None
-    photo_url: Optional[str] = None
+    # photo_url: Optional[str] = None # <-- УДАЛЕНО из схемы обновления/создания, так как теперь список
     bio: Optional[str] = None
     interests: Optional[List[str]] = []
     skills: Optional[List[str]] = []
