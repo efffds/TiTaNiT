@@ -242,35 +242,49 @@ def find_matches(matrix: np.ndarray, user_id_to_index: dict, threshold: float = 
 
     print(f"Found matches for {len(matches)} users.")
     return matches
-def save_recommendations_to_profiles(db_path, matches: dict):
+def save_recommendations_to_match_sets(db_path, matches: dict):
     """
-    Сохраняет список мэтчей (user_ids через запятую) в поле matches таблицы profiles.
-    Если столбца matches нет — создаёт его.
+    Сохраняет данные рекомендаций в таблицу match_sets.
+    Если для пользователя уже есть запись — обновляет matched_user_ids.
     """
-    print("Saving recommendations (matches) directly into profiles table...")
+    print("Saving recommendations into match_sets table...")
 
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
 
-    # Проверяем наличие колонки matches
-    cur.execute("PRAGMA table_info(profiles);")
-    columns = [info[1] for info in cur.fetchall()]
-    if "matches" not in columns:
-        print("Adding 'matches' column to profiles table...")
-        cur.execute("ALTER TABLE profiles ADD COLUMN matches TEXT;")
+    # Создаём таблицу, если её ещё нет
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS match_sets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            matched_user_ids TEXT,  -- JSON-строка, например "[1,5,10]"
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME
+        );
+    """)
 
-    # Обновляем каждую строку
     for user_id, matched_ids in matches.items():
-        if matched_ids:
-            matches_str = ",".join(str(uid) for uid in matched_ids)
-        else:
-            matches_str = ""  # если нет мэтчей — оставляем пусто
+        matched_json = json.dumps(matched_ids) if matched_ids else "[]"
 
-        cur.execute("UPDATE profiles SET matches = ? WHERE user_id = ?;", (matches_str, user_id))
+        # Проверяем, есть ли уже запись
+        cur.execute("SELECT id FROM match_sets WHERE user_id = ?;", (user_id,))
+        existing = cur.fetchone()
+
+        if existing:
+            cur.execute("""
+                UPDATE match_sets
+                SET matched_user_ids = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = ?;
+            """, (matched_json, user_id))
+        else:
+            cur.execute("""
+                INSERT INTO match_sets (user_id, matched_user_ids)
+                VALUES (?, ?);
+            """, (user_id, matched_json))
 
     conn.commit()
     conn.close()
-    print("✅ Matches successfully saved into profiles table.")
+    print("✅ Match sets successfully saved to database.")
 # --- Пример использования ---
 def main():
     """
@@ -301,7 +315,7 @@ def main():
                  m_idx = user_id_to_index[matched_id]
                  print(f"  -> User {matched_id}: {matrix[idx][m_idx]:.4f}")
 
-    save_recommendations_to_profiles(db_path, matches)
+    save_recommendations_to_match_sets(db_path, matches)
 #
 if __name__ == "__main__":
     # Запускаем основную функцию (асинхронность не нужна, так как используем sqlite3)
