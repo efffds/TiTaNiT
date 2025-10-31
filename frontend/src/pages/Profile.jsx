@@ -40,7 +40,6 @@ export default function Profile() {
   const [recItems, setRecItems] = useState([]);
 
   // дебаунс-сейв формы
-  const [saveTick, setSaveTick] = useState(0);
   useEffect(() => {
     if (!token) return;
     const t = setTimeout(() => {
@@ -76,14 +75,14 @@ export default function Profile() {
           const ph = await listPhotos(token);
           const items = ph.items || ph || [];
           setPhotos(items);
-        } catch (_) {
-          // ничего, если эндпоинта нет
+        } catch {
+          /* ничего, если эндпоинта нет */
         }
       } catch (e) {
         setErr(e.message || String(e));
       }
     })();
-  }, [token, nav, saveTick]);
+  }, [token, nav]);
 
   function onPickFile() {
     fileRef.current?.click();
@@ -121,7 +120,7 @@ export default function Profile() {
   async function makePrimary(id) {
     try {
       setLoading(true);
-      try { await setPrimary(id, token); } catch (_) {}
+      try { await setPrimary(id, token); } catch { /* ignore backend absence */ }
       setPhotos((arr) => {
         const withFlag = arr.map((p) => ({ ...p, is_primary: p.id === id }));
         withFlag.sort((a, b) => (b.is_primary === true) - (a.is_primary === true));
@@ -138,7 +137,7 @@ export default function Profile() {
     if (!confirm("Удалить фото?")) return;
     try {
       setLoading(true);
-      try { await deletePhoto(id, token); } catch (_) {}
+      try { await deletePhoto(id, token); } catch { /* ignore backend absence */ }
       setPhotos((p) => p.filter((x) => x.id !== id));
     } catch (e) {
       setErr(e.message || "Не удалось удалить фото");

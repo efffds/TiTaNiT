@@ -1,15 +1,26 @@
-@"
-# Python / venv / caches
+# Python
 .venv/
 __pycache__/
 *.pyc
 
-# Local DB files
+# Databases
 *.db
 
-# OS/IDE
+# Node/Vite
+frontend/node_modules/
+frontend/dist/
+
+# IDE/OS
 .vscode/
 .DS_Store
-"@ | Set-Content -Encoding ascii .gitignore
 
+# Env files
+*.env
+!backend/.env.example
+
+# Uploads
+backend/uploads/
+uploads/
+
+# Local
 scratch/

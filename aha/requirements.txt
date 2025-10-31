@@ -1,8 +1,0 @@
-fastapi
-uvicorn[standard]
-databases[sqlite] # или databases[postgresql]
-sqlalchemy
-passlib[bcrypt]
-pyjwt
-redis
-python-multipart # если принимаете файлы

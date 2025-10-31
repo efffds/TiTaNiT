@@ -1,85 +1,94 @@
 /* БАЗА */
 html, body, #root { height: 100%; margin: 0; }
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@700;800;900&display=swap');
 body {
-  background: #000;                 /* как в макете */
+  background: #000;
   color: #fff;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: 'Manrope', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
+/* Брендинг */
+.brand-svg { width: clamp(240px, 36vw, 360px); height: auto; display:block; margin: 0 auto; }
+
 /* Заголовки и подписи — чисто белые */
-h1, h2, h3, .form-title, .form-label {
-  color: #ffffff;
-}
+h1, h2, h3, .form-title, .form-label { color: #ffffff; }
+.hero-title { font-weight: 900; font-size: clamp(34px, 4.6vw, 48px); line-height: 1.15; letter-spacing: 0.3px; text-align:center; }
 
 /* Карточка формы */
 .card {
   background: #0b0b0b;
   border: none;
-  border-radius: 20px;
-  box-shadow: 0 0 20px rgba(0,0,0,0.5);
+  border-radius: 22px;
+  box-shadow: 0 0 32px rgba(0,0,0,0.6);
 }
 
 /* Инпуты без видимой рамки: только фон */
 input.form-control,
 textarea.form-control {
-  background: #1a1a1a;
+  background: #151515;
   border: none;
-  border-radius: 20px;
-  color: #F2F2F2;                   /* сам текст — ярче */
-  padding: 14px 18px;
-  font-size: 1rem;
-  font-weight: 500;
-  transition: background 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
+  border-radius: 24px;
+  color: #F2F2F2;
+  padding: 16px 20px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
 }
-
-/* Плейсхолдер — ещё чуть светлее, чтобы был читаемее */
 input.form-control::placeholder,
 textarea.form-control::placeholder {
-  color: #CFCFCF;                   /* ярче стандартного серого */
-  opacity: 1;                       /* для Safari */
+  color: #9f9f9f; /* менее яркий плейсхолдер */
+  opacity: 1;
 }
-
-/* Фокус — без синей тени Bootstrap */
 input.form-control:focus,
 textarea.form-control:focus {
-  background: #222;
+  background: #1e1e1e;
   color: #ffffff;
-  box-shadow: none;
+  box-shadow: 0 0 0 2px rgba(38,222,80,0.15);
   outline: none;
 }
 
 /* Кнопка действия */
 .btn-brand {
-  background: #26de50;
-  border: none;
-  border-radius: 14px;
-  font-weight: 800;
-  font-size: 20px;
-  color: #0a0a0a;
-  padding: 14px;
+  background: #1f1f1f; /* не зелёный фон */
+  border: 1px solid #333;
+  border-radius: 18px;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  font-size: clamp(20px, 3vw, 22px);
+  color: #ffffff;
+  padding: 18px 20px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.35);
   transition: transform .06s ease, filter .15s ease;
 }
+.btn-brand:hover { filter: brightness(1.06); }
 .btn-brand:hover { filter: brightness(1.05); }
 .btn-brand:active { transform: translateY(1px); }
 
-/* Акцентная линия под кнопкой */
+/* Горизонтальная линия под кнопкой */
+.cta-wrap { position: relative; padding-bottom: 12px; }
 .cta-underline {
-  width: 100%;
-  height: 5px;
-  background: #26de50;
-  border-radius: 6px;
-  margin-top: 6px;
+  position: absolute;
+  left: 0; right: 0;
+  bottom: 0;
+  height: 4px;
+  background: #26de50; border-radius: 3px;
 }
 
+/* Ссылка входа: белый текст + горизонтальная линия */
+a.accent-link { position: relative; color: #ffffff !important; font-weight: 900; text-decoration: none; display: inline-block; }
+a.accent-link:visited { color: #ffffff !important; }
+a.accent-link::after {
+  content: "";
+  position: absolute;
+  left: 50%; transform: translateX(-50%);
+  bottom: -6px; height: 4px; width: 72px;
+  background: #26de50; border-radius: 3px;
+}
+
+/* Вёрстка страницы регистрации */
+.signup-card { max-width: 560px; margin: 0 auto; }
+.signup-view { padding-top: clamp(18px, 3vw, 36px); }
+
 /* Низ страницы */
-.bottom-note {
-  margin-top: 20px;
-  font-size: 0.95rem;
-  opacity: 0.95;
-}
-.bottom-note a {
-  color: #26de50;
-  font-weight: 800;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
+.bottom-note { margin-top: 18px; font-size: .95rem; color:#a8a8a8; }
+.bottom-note a { color: #26de50; font-weight: 900; text-underline-offset: 3px; }

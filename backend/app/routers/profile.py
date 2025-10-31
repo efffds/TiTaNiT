@@ -6,14 +6,11 @@ from sqlalchemy import select, update, insert, delete
 from ..db import get_async_session
 from ..models import Profile, UserPhoto
 from ..security import get_current_user_id
-
-import aiofiles
-import aiofiles.os
+from pathlib import Path
 
 router = APIRouter(prefix="/profile", tags=["profile"])
 
 def _coerce_list(value):
-    # фронт пока шлёт строки; если начнёшь слать JSON-массивы — дополним
     if value is None:
         return ""
     if isinstance(value, list):
@@ -142,8 +139,9 @@ async def delete_photo(
 
     # удалить файл с диска (если есть)
     try:
-        if await aiofiles.os.path.exists(photo.photo_path):
-            await aiofiles.os.remove(photo.photo_path)
+        p = Path(str(photo.photo_path))
+        if p.exists():
+            p.unlink(missing_ok=True)
     except Exception as e:
         print(f"⚠️ Не удалось удалить файл {photo.photo_path}: {e}")
 

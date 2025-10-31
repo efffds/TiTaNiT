@@ -81,7 +81,7 @@ export async function uploadPhoto(file, token) {
       body: fd,
     });
     if (!res.ok) {
-      if (res.status === 404 || res.status === 405) return { ok: true }; // просто игнорируем
+      if (res.status === 404 || res.status === 405) return { ok: true };
       const text = await res.text().catch(() => "");
       throw new Error(`${res.status} ${res.statusText}: ${text || "Request failed"}`);
     }
@@ -121,6 +121,56 @@ export async function deletePhoto(photoId, token) {
   } catch {
     return { ok: true };
   }
+}
+
+// ===== swipe / matches =====
+export async function swipe(token, targetUserId, action) {
+  const res = await fetch(`${API}/swipe/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders(token) },
+    body: JSON.stringify({ target_user_id: targetUserId, action }),
+  });
+  return handle(res);
+}
+
+export async function matches(token) {
+  const res = await fetch(`${API}/swipe/matches`, { headers: { ...authHeaders(token) } });
+  return handle(res);
+}
+
+// ===== users =====
+export async function getUserById(token, userId) {
+  const res = await fetch(`${API}/users/${userId}`, { headers: { ...authHeaders(token) } });
+  return handle(res);
+}
+
+// ===== chat =====
+export async function listConversations(token) {
+  const res = await fetch(`${API}/chat/conversations`, { headers: { ...authHeaders(token) } });
+  return handle(res);
+}
+
+export async function openChat(token, targetUserId) {
+  const res = await fetch(`${API}/chat/open`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders(token) },
+    body: JSON.stringify({ target_user_id: targetUserId }),
+  });
+  return handle(res);
+}
+
+export async function listMessages(token, conversationId) {
+  const res = await fetch(`${API}/chat/${conversationId}/messages`, { headers: { ...authHeaders(token) } });
+  return handle(res);
+}
+
+export async function sendMessage(token, conversationId, body) {
+  const res = await fetch(`${API}/chat/${conversationId}/messages`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders(token) },
+    body: JSON.stringify({ body }),
+  });
+  return handle(res);
 }
 
 // ===== recommendations =====

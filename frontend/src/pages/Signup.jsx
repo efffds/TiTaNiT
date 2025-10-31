@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { signup } from "../api";
 import { useNavigate, Link } from "react-router-dom";
+import LogoUrl from "../assets/Group 4.svg";
 
 export default function Signup() {
   const nav = useNavigate();
@@ -49,23 +50,18 @@ export default function Signup() {
   };
 
   return (
-    <div className="container-fluid min-vh-100 d-flex flex-column">
+    <div className="signup-view container-fluid min-vh-100 d-flex flex-column">
       {/* центральная зона */}
       <div className="container flex-grow-1 d-flex align-items-start align-items-md-center justify-content-center py-4">
-        <div className="w-100" style={{ maxWidth: 520 }}>
+        <div className="signup-card w-100">
           {/* логотип */}
-          <div className="text-center mb-3">
-            <div className="d-inline-flex align-items-center gap-2">
-              <span className="text-success fs-4">♥</span>
-              <h1 className="m-0 fw-bold" style={{letterSpacing: "1px"}}>TiTi</h1>
-              <span className="text-success fs-4">♥</span>
-            </div>
-            <div className="opacity-75 small mt-n1">for TITANIT</div>
+          <div className="text-center mb-2">
+            <img src={LogoUrl} alt="TiTi" className="brand-svg" />
           </div>
 
           {/* карточка формы */}
           <div className="card shadow-lg p-4">
-            <h2 className="fw-bold mb-3">Расскажите о себе</h2>
+            <h2 className="hero-title text-center mb-3">Расскажите о себе</h2>
 
             {err && (
               <div className="alert alert-danger py-2">{err}</div>
@@ -111,10 +107,12 @@ export default function Signup() {
                   value={bio}
                   onChange={(e)=>setBio(e.target.value)}
                 />
-                <button type="submit" className="btn btn-brand w-100" disabled={loading}>
+                <div className="cta-wrap">
+                  <button type="submit" className="btn btn-brand w-100" disabled={loading}>
                     Искать людей
-                </button>
-                <div className="cta-underline"></div>
+                  </button>
+                  <div className="cta-underline"></div>
+                </div>
               </form>
             ) : (
               <form onSubmit={doSignup} className="d-grid gap-3">
@@ -138,12 +136,10 @@ export default function Signup() {
               </form>
             )}
 
-            <hr className="border-secondary my-4" />
-            <div className="text-center">
-              Уже есть аккаунт?{" "}
-              <Link to="/login" className="fw-bold text-success text-decoration-underline">
-                Войти
-              </Link>
+            <div className="text-center bottom-note">
+              Уже есть аккаунт?
+              {" "}
+              <Link to="/login" className="accent-link">Войти</Link>
             </div>
           </div>
         </div>
