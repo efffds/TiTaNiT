@@ -6,7 +6,7 @@ import time
 
 # --- команды для серверов ---
 FRONT_CMD = "npm run dev --prefix ./frontend"
-BACK_CMD = "python -m uvicorn backend.app.main:app --reload --port 8000"
+BACK_CMD = "./backend/.venv/bin/python -m uvicorn backend.app.main:app --reload --port 8000"
 
 procs = []
 

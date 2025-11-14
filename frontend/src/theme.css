@@ -1,0 +1,110 @@
+/* src/theme.css --------------------------------------------------- */
+:root {
+  --color-primary: #26de50;   /* основной «зелёный» */
+  --bg-main: #0d0d0d;        /* фон страницы */
+  --bg-card: #1a1a1a;        /* фон карточек */
+  --color-text: #e0e0e0;     /* основной текст */
+  --color-muted: #7a7a7a;    /* вспомогательный */
+  --border-radius: .6rem;
+  --transition-slow: .3s ease;
+}
+
+/* ---------- базовый фон ---------- */
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  background: var(--bg-main);
+  color: var(--color-text);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* ---------- карточка (общий контейнер) ---------- */
+.app-card {
+  background: var(--bg-card);
+  border-radius: var(--border-radius);
+  box-shadow: 0 4px 12px rgba(0,0,0,.4);
+  padding: 2rem;
+  margin-bottom: 2rem;
+}
+
+/* ---------- заголовок с зелёной линией ---------- */
+.section-title {
+  position: relative;
+  margin-bottom: 1.5rem;
+  font-weight: 600;
+  font-size: 1.3rem;
+  color: var(--color-text);
+}
+.section-title::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -4px;
+  width: 40px;
+  height: 2px;
+  background: var(--color-primary);
+}
+
+/* ---------- поля ввода (input + textarea) ---------- */
+input.custom-input,
+textarea.custom-input {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid var(--color-muted);
+  color: var(--color-text);
+  padding: .4rem .1rem;
+  font-size: 1rem;
+  width: 100%;
+  transition: border-color var(--transition-slow);
+}
+input.custom-input:focus,
+textarea.custom-input:focus {
+  outline: none;
+  border-bottom-color: var(--color-primary);
+}
+
+/* ---------- кнопка «Eco» (зелёная) ---------- */
+.btn-primary-eco {
+  background: var(--color-primary);
+  border: none;
+  color: #fff;
+  padding: .6rem 1.4rem;
+  font-weight: 500;
+  border-radius: var(--border-radius);
+  transition: background var(--transition-slow);
+}
+.btn-primary-eco:hover,
+.btn-primary-eco:focus {
+  background: #1ebc43;
+}
+
+/* ---------- логотип ---------- */
+.logo {
+  display: block;
+  max-width: 180px;
+  margin: 0 auto 1.5rem;
+}
+
+/* ---------- нижняя навигация ---------- */
+.bottom-nav {
+  background: #111;
+  border-top: 1px solid #222;
+}
+.bottom-nav .nav-item {
+  flex: 1;
+  text-align: center;
+  color: #bbb;
+  font-weight: 600;
+}
+.bottom-nav .nav-item.active,
+.bottom-nav .nav-item:hover {
+  color: var(--color-primary);
+}
+
+/* ---------- адаптивная правка ---------- */
+@media (max-width: 576px) {
+  .app-card { padding: 1.5rem; }
+}

@@ -1,10 +1,12 @@
 /* БАЗА */
-html, body, #root { height: 100%; margin: 0; }
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@700;800;900&display=swap');
+
+html, body, #root { height: 100%; margin: 0; }
 body {
-  background: #000;
-  color: #fff;
-  font-family: 'Manrope', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  margin: 0;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  background-color: #121212; /* dark background matching your UI */
+  color: #e0e0e0;
 }
 
 /* Брендинг */

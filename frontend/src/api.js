@@ -38,22 +38,52 @@ export async function signup(payload) {
   return handle(res);
 }
 
-export async function login(payload) {
-  const res = await fetch(`${API}/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  return handle(res);
-}
-
 export async function me(token) {
   const res = await fetch(`${API}/users/me`, {
     headers: { ...authHeaders(token) },
   });
   return handle(res);
 }
-
+export async function login(payload) {
+  const res = await fetch(`${API}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  
+  if (!res.ok) {
+    let errorMessage = "Неверный email или пароль";
+    
+    try {
+      const errorData = await res.json();
+      
+      if (res.status === 422) {
+        // Обработка ошибок валидации (например, невалидный email)
+        errorMessage = "Пожалуйста, введите корректный email адрес";
+      } else if (res.status === 401) {
+        errorMessage = "Неверный email или пароль";
+      } else if (errorData.detail) {
+        // Если detail - массив (как в случае 422), берем первое сообщение
+        if (Array.isArray(errorData.detail) && errorData.detail.length > 0) {
+          const firstError = errorData.detail[0];
+          if (firstError.msg && firstError.loc && firstError.loc.includes("email")) {
+            errorMessage = "Пожалуйста, введите корректный email адрес";
+          } else {
+            errorMessage = firstError.msg || "Ошибка в данных";
+          }
+        } else {
+          errorMessage = errorData.detail;
+        }
+      }
+    } catch {
+      errorMessage = `Ошибка ${res.status}`;
+    }
+    
+    throw new Error(errorMessage);
+  }
+  
+  return await res.json();
+}
 // ===== photos (мягкий фолбэк на пустой список/OK) =====
 export async function listPhotos(token) {
   try {
